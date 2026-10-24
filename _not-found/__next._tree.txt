@@ -1,4 +1,4 @@
-:HL["/cerhera-nail/_next/static/chunks/1jcom4082eghh.css","style"]
+:HL["/cerhera-nail/_next/static/chunks/3swzkq2vsmjhi.css","style"]
 2:[["children",{"s":"__PAGE__","h":160}]]
 1:[["children",{"s":"/_not-found","h":96,"c":"$Q2"}]]
-0:{"b":"Vgb4qVpS2OtHbGveew4IY","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"vu1u9GDbIQ-xFbUDyehfS","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
