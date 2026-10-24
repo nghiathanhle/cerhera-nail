@@ -26,19 +26,28 @@ export function SiteHeader({ storeName }: { storeName: string }) {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 md:px-8">
         <Link
           href="/"
-          className="font-display text-2xl tracking-tight text-ink transition-opacity hover:opacity-70 md:text-[1.65rem]"
+          className={cn(
+            "font-display text-2xl tracking-tight transition-opacity hover:opacity-70 md:text-[1.65rem]",
+            isHome ? "text-foam" : "text-ink",
+          )}
         >
           {storeName}
         </Link>
 
-        <nav className="hidden items-center gap-7 text-sm text-ink/75 md:flex">
+        <nav
+          className={cn(
+            "hidden items-center gap-7 text-sm md:flex",
+            isHome ? "text-foam/80" : "text-ink/75",
+          )}
+        >
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
-                "transition-colors hover:text-ink",
-                pathname.startsWith(link.href) && "text-ink",
+                "transition-colors",
+                isHome ? "hover:text-foam" : "hover:text-ink",
+                pathname.startsWith(link.href) && (isHome ? "text-foam" : "text-ink"),
               )}
             >
               {link.label}
@@ -48,7 +57,12 @@ export function SiteHeader({ storeName }: { storeName: string }) {
 
         <Link
           href="/cart/"
-          className="group relative inline-flex items-center gap-2 rounded-full border border-ink/15 bg-foam/70 px-4 py-2 text-sm text-ink backdrop-blur-sm transition hover:border-ink/30 hover:bg-foam"
+          className={cn(
+            "group relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm backdrop-blur-sm transition",
+            isHome
+              ? "border border-foam/35 bg-ink/25 text-foam hover:border-foam/55 hover:bg-ink/40"
+              : "border border-ink/15 bg-foam/70 text-ink hover:border-ink/30 hover:bg-foam",
+          )}
         >
           Bag
           <span
