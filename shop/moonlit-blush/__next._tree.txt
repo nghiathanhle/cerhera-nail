@@ -1,8 +1,8 @@
-:HL["/cerhera-nail/_next/static/chunks/3swzkq2vsmjhi.css","style"]
+:HL["/cerhera-nail/_next/static/chunks/42y7kyp5u9yjw.css","style"]
 :HL["/cerhera-nail/_next/static/media/c0680f1bdb3a2e90-s.p.1gsd1jahc5dg_.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/cerhera-nail/_next/static/media/edb99fec956915f8-s.p.32sris142tqlb.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 4:[["children",{"s":"__PAGE__","h":160}]]
 3:[["children",{"s":{"n":"slug","t":"d","k":"moonlit-blush","s":[]},"h":96,"c":"$Q4"}]]
 2:[["children",{"s":"shop","h":96,"c":"$Q3"}]]
 1:[["children",{"s":"(store)","h":96,"c":"$Q2"}]]
-0:{"b":"vu1u9GDbIQ-xFbUDyehfS","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"hYw7AzUdNJ4d0xUqleI2A","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
