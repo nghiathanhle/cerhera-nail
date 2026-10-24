@@ -23,20 +23,28 @@ Without Supabase env vars, the shop uses demo catalog data. Leave `NEXT_PUBLIC_B
 
 ## GitHub Pages deploy
 
-Pushing to `main` runs [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), which builds with:
+Site URL: https://nghiathanhle.github.io/cerhera-nail/
 
-- `NEXT_PUBLIC_BASE_PATH=/cerhera-nail`
-- `NEXT_PUBLIC_SITE_URL=https://nghiathanhle.github.io/cerhera-nail`
+### Current publish path (`gh-pages` branch)
 
-### Repo secrets (Settings → Secrets and variables → Actions)
+Pages is set to the `gh-pages` branch (static `out/` build with base path `/cerhera-nail`). Redeploy locally:
+
+```bash
+$env:NEXT_PUBLIC_BASE_PATH="/cerhera-nail"
+$env:NEXT_PUBLIC_SITE_URL="https://nghiathanhle.github.io/cerhera-nail"
+npm run build
+npx gh-pages -d out
+```
+
+### Optional: GitHub Actions
+
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) can deploy from Actions if you switch Pages → Source to **GitHub Actions** and add secrets:
 
 | Secret | Purpose |
 |--------|---------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key |
 | `NEXT_PUBLIC_ADMIN_EMAILS` | Admin allowlist |
-
-Also enable **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 ## Supabase setup
 
