@@ -31,14 +31,15 @@ export default async function ProductPage({ params }: Props) {
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-2 md:gap-14 md:px-8 md:py-20">
       <div className="space-y-4">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-blush/25">
+        <div className="overflow-hidden rounded-[1.75rem] bg-blush/25">
           {primary && (
             <Image
               src={resolveImageUrl(primary.storage_path)}
               alt={primary.alt || product.name}
-              fill
+              width={1200}
+              height={1500}
               priority
-              className="object-cover"
+              className="aspect-[4/5] h-auto w-full object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
             />
           )}
@@ -48,13 +49,14 @@ export default async function ProductPage({ params }: Props) {
             {images.slice(1, 4).map((img) => (
               <div
                 key={img.id}
-                className="relative aspect-square overflow-hidden rounded-2xl bg-mist"
+                className="overflow-hidden rounded-2xl bg-mist"
               >
                 <Image
                   src={resolveImageUrl(img.storage_path)}
                   alt={img.alt || product.name}
-                  fill
-                  className="object-cover"
+                  width={400}
+                  height={400}
+                  className="aspect-square h-auto w-full object-cover"
                   sizes="150px"
                 />
               </div>

@@ -1,10 +1,10 @@
--- Cerhera Nail initial schema
+-- Cerhera Nails initial schema
 
 create extension if not exists "pgcrypto";
 
 create table public.site_settings (
   id integer primary key default 1 check (id = 1),
-  store_name text not null default 'Cerhera Nail',
+  store_name text not null default 'Cerhera Nails',
   flat_shipping_cents integer not null default 595,
   free_shipping_threshold_cents integer default 7500
 );

@@ -19,7 +19,7 @@ export function SiteHeader({ storeName }: { storeName: string }) {
   return (
     <header
       className={cn(
-        "absolute inset-x-0 top-0 z-40",
+        "absolute inset-x-0 top-0 z-50",
         !isHome && "relative bg-paper/80 backdrop-blur-sm border-b border-ink/5",
       )}
     >

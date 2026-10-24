@@ -15,15 +15,15 @@ export function ProductCard({ product }: { product: ProductWithImages }) {
       href={`/shop/${product.slug}/`}
       className="group block animate-fade-up"
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.35rem] bg-blush/30">
+      <div className="overflow-hidden rounded-[1.35rem] bg-blush/30">
         <Image
           src={src}
           alt={image?.alt || product.name}
-          fill
+          width={800}
+          height={1000}
           sizes="(max-width: 768px) 50vw, 33vw"
-          className="object-cover transition duration-700 ease-out group-hover:scale-[1.04]"
+          className="aspect-[4/5] h-auto w-full object-cover transition duration-700 ease-out group-hover:scale-[1.04]"
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/25 via-transparent to-transparent opacity-80" />
       </div>
       <div className="mt-4 flex items-baseline justify-between gap-3 px-1">
         <div>

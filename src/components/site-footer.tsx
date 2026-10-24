@@ -7,7 +7,7 @@ export function SiteFooter({ storeName }: { storeName: string }) {
         <div>
           <p className="font-display text-2xl text-ink">{storeName}</p>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-ink/65">
-            Ready-to-wear press-on styles, made for soft days and little
+            Cerhera Nails — ready-to-wear press-ons for soft days and little
             celebrations. Ships within the US.
           </p>
         </div>

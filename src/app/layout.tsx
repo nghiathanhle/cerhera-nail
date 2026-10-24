@@ -15,11 +15,11 @@ const body = Outfit({
 
 export const metadata: Metadata = {
   title: {
-    default: "Cerhera Nail — Press-on nails",
-    template: "%s · Cerhera Nail",
+    default: "Cerhera Nails — Press-on nails",
+    template: "%s · Cerhera Nails",
   },
   description:
-    "Simple, elegant, whimsical press-on nail styles. Ready sets shipping within the US.",
+    "Cerhera Nails — simple, elegant, whimsical press-on styles. Ready sets shipping within the US.",
 };
 
 export default function RootLayout({

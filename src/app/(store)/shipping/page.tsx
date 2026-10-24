@@ -6,9 +6,9 @@ export default function ShippingPage() {
   return (
     <ContentPage eyebrow="Delivery" title="Shipping">
       <p>
-        We currently ship within the United States only. Flat-rate shipping is
-        calculated at checkout, with free shipping once you pass the threshold
-        set in the shop.
+        Cerhera Nails currently ships within the United States only. Flat-rate
+        shipping is calculated at checkout, with free shipping once you pass
+        the threshold set in the shop.
       </p>
       <ul>
         <li>Processing: usually 1–3 business days</li>

@@ -6,9 +6,9 @@ export default function ReturnsPage() {
   return (
     <ContentPage eyebrow="Peace of mind" title="Returns">
       <p>
-        Because styles are wearable beauty goods, we can’t accept returns on
-        opened sets. If something arrives damaged or incorrect, email us within
-        7 days with photos and we’ll make it right.
+        Because Cerhera Nails styles are wearable beauty goods, we can’t accept
+        returns on opened sets. If something arrives damaged or incorrect, email
+        us within 7 days with photos and we’ll make it right.
       </p>
       <ul>
         <li>Unopened sets may be eligible for exchange within 14 days</li>

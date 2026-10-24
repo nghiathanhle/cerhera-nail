@@ -6,8 +6,9 @@ export default function SizeChartPage() {
   return (
     <ContentPage eyebrow="Fit" title="Size chart">
       <p>
-        Each set includes ten nails across common sizes. Match your natural
-        nails to the chart below — if you’re between sizes, size up for comfort.
+        Each Cerhera Nails set includes ten nails across common sizes. Match
+        your natural nails to the chart below — if you’re between sizes, size up
+        for comfort.
       </p>
       <h2>How to measure</h2>
       <ul>

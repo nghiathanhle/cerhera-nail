@@ -20,7 +20,7 @@ export default async function HomePage() {
         <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-petal">
-              This week’s bloom
+              From Cerhera Nails
             </p>
             <h2 className="mt-2 font-display text-3xl text-ink md:text-4xl">
               Featured styles

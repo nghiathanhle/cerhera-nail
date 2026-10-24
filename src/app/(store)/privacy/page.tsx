@@ -6,9 +6,9 @@ export default function PrivacyPage() {
   return (
     <ContentPage eyebrow="Trust" title="Privacy">
       <p>
-        We collect what we need to fulfill orders: your email, shipping address,
-        and payment details processed by Stripe. We don’t sell your personal
-        information.
+        Cerhera Nails collects what we need to fulfill orders: your email,
+        shipping address, and payment details processed by Stripe. We don’t sell
+        your personal information.
       </p>
       <h2>What we store</h2>
       <ul>

@@ -6,8 +6,8 @@ export default function CarePage() {
   return (
     <ContentPage eyebrow="Keep them lovely" title="Care tips">
       <p>
-        Treat press-ons like a favorite ring — gentle with edges, kind with
-        water, and they’ll last through soft weeks of everyday life.
+        Treat your Cerhera Nails like a favorite ring — gentle with edges, kind
+        with water, and they’ll last through soft weeks of everyday life.
       </p>
       <h2>Wear</h2>
       <ul>

@@ -102,13 +102,14 @@ export function CartView({
               key={product.id}
               className="flex gap-4 rounded-[1.25rem] border border-ink/8 bg-foam/70 p-4"
             >
-              <div className="relative h-28 w-24 shrink-0 overflow-hidden rounded-xl bg-mist">
+              <div className="h-28 w-24 shrink-0 overflow-hidden rounded-xl bg-mist">
                 {image && (
                   <Image
                     src={resolveImageUrl(image.storage_path)}
                     alt={image.alt || product.name}
-                    fill
-                    className="object-cover"
+                    width={96}
+                    height={112}
+                    className="h-full w-full object-cover"
                     sizes="96px"
                   />
                 )}

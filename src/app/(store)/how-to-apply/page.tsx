@@ -6,8 +6,8 @@ export default function HowToApplyPage() {
   return (
     <ContentPage eyebrow="Ritual" title="How to apply">
       <p>
-        A calm ten minutes is all it takes. Soft hands, clean nails, and a
-        little patience — then you’re done.
+        A calm ten minutes is all it takes to wear your Cerhera Nails. Soft
+        hands, clean nails, and a little patience — then you’re done.
       </p>
       <h2>Steps</h2>
       <ul>

@@ -2,7 +2,7 @@ import type { ProductWithImages, SiteSettings } from "./types";
 
 export const demoSettings: SiteSettings = {
   id: 1,
-  store_name: "Cerhera Nail",
+  store_name: "Cerhera Nails",
   flat_shipping_cents: 595,
   free_shipping_threshold_cents: 7500,
 };

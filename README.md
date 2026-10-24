@@ -1,4 +1,4 @@
-# Cerhera Nail
+# Cerhera Nails
 
 Simple, elegant, whimsical storefront for ready-made press-on nail styles.
 
