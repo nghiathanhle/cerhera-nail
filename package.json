@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "npx serve out",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy:pages": "gh-pages -d out --dotfiles --nojekyll"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -17,12 +18,13 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@tailwindcss/turbopack": "^4",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
+    "gh-pages": "^6.3.0",
     "supabase": "^2.122.0",
     "tailwindcss": "^4",
     "typescript": "^5"

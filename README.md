@@ -30,11 +30,19 @@ Site URL: https://nghiathanhle.github.io/cerhera-nail/
 Pages is set to the `gh-pages` branch (static `out/` build with base path `/cerhera-nail`). Redeploy locally:
 
 ```bash
+# PowerShell
 $env:NEXT_PUBLIC_BASE_PATH="/cerhera-nail"
 $env:NEXT_PUBLIC_SITE_URL="https://nghiathanhle.github.io/cerhera-nail"
 npm run build
-npx gh-pages -d out
+npm run deploy:pages
+
+# bash
+NEXT_PUBLIC_BASE_PATH=/cerhera-nail \
+NEXT_PUBLIC_SITE_URL=https://nghiathanhle.github.io/cerhera-nail \
+npm run build && npm run deploy:pages
 ```
+
+`deploy:pages` publishes `out/` with `--dotfiles --nojekyll`. Without that, GitHub Pages runs Jekyll and silently drops `_next/` (underscore folders), so CSS/JS 404 and the site renders unstyled.
 
 ### Optional: GitHub Actions
 

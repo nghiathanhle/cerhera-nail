@@ -74,7 +74,7 @@ export const demoProducts: ProductWithImages[] = [
         id: "img-3",
         product_id: "demo-garden-ink",
         storage_path:
-          "https://images.unsplash.com/photo-1607779097040-26e80aa78eec?w=1200&q=80",
+          "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=1200&q=80",
         alt: "Garden Ink press-on nails",
         sort_order: 0,
       },
@@ -146,7 +146,7 @@ export const demoProducts: ProductWithImages[] = [
         id: "img-6",
         product_id: "demo-seafoam",
         storage_path:
-          "https://images.unsplash.com/photo-1610992015732-cb2bf055cdc2?w=1200&q=80",
+          "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1200&q=80",
         alt: "Seafoam Whisper press-on nails",
         sort_order: 0,
       },
