@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #2c2522;
+  --foam: #fff9f7;
+  --paper: #f7f1ed;
+  --blush: #f0c4cd;
+  --petal: #d9788c;
+  --sage: #9aaf9a;
+  --mist: #ebe4df;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-foam: var(--foam);
+  --color-paper: var(--paper);
+  --color-blush: var(--blush);
+  --color-petal: var(--petal);
+  --color-sage: var(--sage);
+  --color-mist: var(--mist);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.85s ease-out both;
+}
+
+.animate-soft-pulse {
+  animation: soft-pulse 0.45s ease-out;
+}
+
+body {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse at 12% 0%, rgba(240, 196, 205, 0.45), transparent 42%),
+    radial-gradient(ellipse at 88% 8%, rgba(154, 175, 154, 0.18), transparent 38%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--blush) 70%, white);
+  color: var(--ink);
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+.prose-petal h2 {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.75rem;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-petal p,
+.prose-petal li {
+  color: color-mix(in oklab, var(--ink) 72%, transparent);
+  line-height: 1.7;
+}
+
+.prose-petal ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.4rem;
+}
