@@ -18,7 +18,8 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!stripeKey) {
-      return json({ error: "Missing STRIPE_SECRET_KEY" }, 500);
+      console.error("Missing STRIPE_SECRET_KEY");
+      return json({ error: "Checkout failed." }, 500);
     }
 
     const body = await req.json();
@@ -50,6 +51,7 @@ Deno.serve(async (req) => {
       .in("id", ids);
 
     if (error || !products) {
+      console.error(error?.message ?? "products query returned no rows");
       return json({ error: "Could not load products." }, 500);
     }
 
@@ -114,20 +116,20 @@ Deno.serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
-        cart: JSON.stringify(cart),
         subtotal_cents: String(subtotal),
         shipping_cents: String(shippingCents),
       },
     });
 
     if (!session.url) {
-      return json({ error: "Stripe did not return a checkout URL." }, 500);
+      console.error("Stripe checkout session had no URL");
+      return json({ error: "Checkout failed." }, 500);
     }
 
     return json({ url: session.url });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Checkout failed";
-    return json({ error: message }, 500);
+    console.error(err);
+    return json({ error: "Checkout failed." }, 500);
   }
 });
 
