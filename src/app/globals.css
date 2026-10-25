@@ -8,6 +8,33 @@
   --petal: #d9788c;
   --sage: #9aaf9a;
   --mist: #ebe4df;
+  /* Inner row of the store header. Safe-area padding is added on the header. */
+  --site-header-row: 4rem;
+  --site-header-offset: calc(env(safe-area-inset-top, 0px) + var(--site-header-row));
+}
+
+@media (min-width: 768px) {
+  :root {
+    --site-header-row: 4.5rem;
+  }
+}
+
+/*
+  Store header. Sticky (not fixed) so it stays in the scrolling layer:
+  Chrome on iPhone draws its address bar at the top and resizes it on
+  scroll and overscroll. A fixed bar is pinned to the layout viewport and
+  slides under that toolbar; sticky rides with the visual viewport.
+  Do not set transform, filter, or backdrop-filter on this element or on
+  html/body — WebKit then positions it against the wrong box.
+  padding-top clears the notch when viewport-fit=cover.
+  JS may set `top` from visualViewport.offsetTop (never a transform).
+*/
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 @theme inline {
@@ -51,7 +78,18 @@
   animation: soft-pulse 0.45s ease-out;
 }
 
+/*
+  The viewport is the scrollport. overflow: hidden/auto on html or body
+  breaks position: sticky on WebKit. min-height (not height: 100% / 100vh)
+  lets the document grow; a fixed 100vh/100% box makes the sticky header
+  scroll away after one screen, which is the area Chrome's top toolbar covers.
+*/
+html {
+  min-height: 100%;
+}
+
 body {
+  min-height: 100%;
   background-color: var(--paper);
   background-image:
     radial-gradient(ellipse at 12% 0%, rgba(240, 196, 205, 0.45), transparent 42%),

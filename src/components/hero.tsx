@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function Hero({ storeName }: { storeName: string }) {
   return (
-    <section className="relative isolate min-h-[100svh] overflow-hidden">
+    <section className="relative isolate -mt-[var(--site-header-offset)] min-h-[100svh] overflow-hidden">
       <Image
         src="https://images.unsplash.com/photo-1604654894610-df63bc536371?w=1800&q=85"
         alt="Cerhera Nails press-on styles"
