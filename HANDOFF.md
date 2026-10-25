@@ -1,6 +1,6 @@
 # Cerhera Nails — Agent Handoff
 
-Last updated: 2026-10-24 (America/New_York)
+Last updated: 2026-10-24 ~10:00 PM (America/New_York)
 
 Use this document to continue work without re-discovering context. Prefer this over reconstructing history from chat.
 
@@ -149,7 +149,10 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 - [x] Prod admin auth user `nghiathanhle.25@gmail.com` created 2026-10-24 (email confirmed; random password generated on pi-1 and discarded — login is magic link only)
 - [x] Prod admin auth user `angela.nguyen646@gmail.com` created 2026-10-24 (email confirmed, random password discarded; no login link issued — she needs SMTP-delivered magic link or an operator-generated link)
 - [ ] Verify admin login end-to-end (one-time link issued 2026-10-24, see Security notes)
-- [ ] Real product photos (still Unsplash placeholders)
+- [ ] Real product photos (still Unsplash placeholders; some shop cards show wrong/non-nail imagery)
+- [ ] Product attributes for press-ons: `shape`, `length`, `finish`, wear time, kit contents (see UX audit below)
+- [ ] Shop filters by shape/length; size chart mm diagram
+- [ ] **No end-to-end Stripe test checkout yet** — blocked on Edge Functions deploy + Stripe keys/webhook
 - [x] Prod pooler ports 5432/6543 bound to `127.0.0.1` (2026-10-24). Note: `update.sh` / upstream compose updates may revert this edit — re-check after updating.
 - [x] Prod `DISABLE_SIGNUP=true` (2026-10-24); public `/auth/v1/signup` and OTP user-creation return 422 `signup_disabled`
 - [ ] **Configure real SMTP on prod** — `SMTP_HOST` is still the template placeholder `supabase-mail` (no mail container), so magic links cannot be delivered
@@ -451,14 +454,74 @@ Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `n
 
 ---
 
+## UX audit — test.cerheranails.com (2026-10-24 evening)
+
+**Audited:** home, shop, PDPs (Cherry Mist, Moonlit Blush), cart (add-to-bag), size chart, how to apply, care, shipping, returns, privacy, admin login.
+
+**Site health:** Layout/CSS/nav work. Brand “Cerhera Nails” consistent. Catalog loads from test Supabase. **Not a broken-chrome problem** — gaps are press-on commerce content and attributes.
+
+### Test checkout?
+
+**No.** Cart and “Checkout with Stripe” UI work, but a real Stripe session was **not** completed.
+
+Blocked by handoff items still open:
+1. Edge Functions not deployed on self-hosted Supabase (volumes still stock `main` + `hello`)
+2. No Stripe test keys / webhook on `api.cerheranails.com` (or api-test)
+
+Until those land, clicking Checkout will fail or hang at the Edge Function call. After deploy: smoke-test with card `4242 4242 4242 4242`.
+
+### P0 — must fix for nail buyers
+
+| # | Improvement | Why | Technical sketch |
+|---|-------------|-----|------------------|
+| 1 | **Shape + length** on PDP + shop cards | Dealbreaker attributes; currently buried in prose or missing | Migration: `products.shape`, `products.length` (text/enums); show badges; admin form fields |
+| 2 | **Shop filters** by shape/length (finish optional) | Scanning PDPs to discover shape kills conversion | Client filters on shop (extend `ShopCatalog`) or query params |
+| 3 | **Replace wrong Unsplash / non-nail card images** | Petal Lattice / some cards look like makeup tools or process shots | Upload real photos to Storage; fix `product_images` |
+| 4 | **PDP gallery (4+ shots)** | Need on-hand, flat-lay of 10 nails, macro, side angle | Multiple `product_images`; gallery UI |
+| 5 | **What’s included** on PDP | Tabs vs glue, file, wipe, etc. | `products.kit_includes` text/jsonb or markdown bullets |
+| 6 | **Wear time** on PDP | Top FAQ for press-ons | `products.wear_notes` or structured tabs vs glue strings |
+| 7 | **Exact free-shipping $** on cart + shipping page | Copy currently vague (“threshold set in the shop”) | Read `site_settings.free_shipping_threshold_cents`; show `$X` + cart progress bar |
+
+### P1 — high conversion impact
+
+| # | Improvement | Technical sketch |
+|---|-------------|------------------|
+| 8 | Finish type (glossy/matte/shimmer) as field | `products.finish` |
+| 9 | Application time / beginner-friendly badge | Copy field or static “~10 min” from how-to page on PDP |
+| 10 | Reusability + damage-free claims | Hero + PDP bullets |
+| 11 | Size chart: mm table + measure diagram | Content page + optional image asset |
+| 12 | Reviews / UGC (even manual first) | Later: Judge.me/Loox or simple `reviews` table |
+| 13 | Cart: trust line, ETA window, free-ship progress | CartView + settings |
+| 14 | Cross-sell (glue/oil) on cart | Optional products or static upsell |
+| 15 | Related styles on PDP | Query by shape/finish |
+| 16 | How-to short video embed | Content / PDP link |
+
+### P2 — polish
+
+Email capture, Instagram/UGC grid, FAQ accordion, occasion collections, sizing sample kit SKU, search, wishlist, promo code field (needs Stripe coupons + function support), gift cards.
+
+### Schema suggestion (when implementing P0)
+
+```text
+products += shape text, length text, finish text,
+            wear_notes text, kit_includes text,
+            application_notes text  -- optional
+```
+
+Seed from existing description phrases (“short almond”, “medium coffin”) then clean in admin.
+
+---
+
 ## Suggested next steps for the next agent
 
 1. Finish Cloudflare Pages (`cerhera-nail`): GitHub app authorization, env vars, custom domains, verify
 2. Configure real SMTP on prod, verify magic-link login for both admins (users + `public.admins` rows already exist)
-3. Deploy Edge Functions + Stripe test keys on pi-1; smoke-test checkout with `4242…`
-4. DHCP reservation for pi-1; Always Use HTTPS
-5. Replace Unsplash with real product photos via admin or Storage
-6. When ready, migrate to Supabase Cloud (checklist above)
+3. **Deploy Edge Functions + Stripe test keys on pi-1; smoke-test checkout with `4242…`** (unblocks “test checkout”)
+4. Product attribute migration + shop filters + PDP badges (UX P0)
+5. Replace Unsplash with real product photos; fix wrong card imagery
+6. Surface free-shipping threshold $ on cart/shipping
+7. DHCP reservation for pi-1; Always Use HTTPS
+8. When ready, migrate to Supabase Cloud (checklist above)
 
 ---
 
@@ -469,5 +532,6 @@ Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `n
 - User asked to traverse broken Pages site → root cause was missing CSS (`_next` 404 + uncompiled Tailwind), fixed in commits `693c47e` and `519754e`
 - User asked what integrations are needed and how to set up Supabase/Stripe (answered; not yet executed with real keys)
 - 2026-10-24: self-hosted Supabase on pi-1 (prod + test), Cloudflare Tunnel, domain cerheranails.com, test site at test.cerheranails.com, prod DB seeded, move to Cloudflare Pages started. User plans to test on pi-1 Supabase, then move to Supabase Cloud.
+- 2026-10-24 evening: UX click-through of https://test.cerheranails.com/ — chrome OK; press-on attribute/content gaps recorded above. **No Stripe test checkout performed** (functions/Stripe not live yet).
 
 Do not edit the original plan file at `~/.cursor/plans/petal_press_store_*.plan.md` unless the user asks.
