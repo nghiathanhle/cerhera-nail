@@ -14,12 +14,17 @@
 -- service role, which bypasses RLS. They can still read prices and stock,
 -- insert orders and order_items, and decrement stock without an admin row.
 --
--- Seed the first admin as postgres (or the service role) after the auth user
--- exists. Do not put a password in this statement. An empty admins table
--- means no authenticated user can write the catalog or read orders.
+-- Seed admins as postgres (or the service role) after the auth users exist.
+-- Do not put a password in this statement. An empty admins table means no
+-- authenticated user can write the catalog or read orders. On prod both
+-- auth users already exist:
 --
 --   insert into public.admins (user_id)
---   select id from auth.users where email = '<admin email>';
+--   select id from auth.users
+--   where email in (
+--     'nghiathanhle.25@gmail.com',
+--     'angela.nguyen646@gmail.com'
+--   );
 
 create table public.admins (
   user_id uuid primary key references auth.users (id) on delete cascade,
