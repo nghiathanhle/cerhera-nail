@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
+/*
+  Sahara desert sunset — ethereal, warm, dusk-lit.
+  Avoid cream(#F4F1EA)+terracotta cliché and purple SaaS gradients.
+*/
 :root {
-  --ink: #2c2522;
-  --foam: #fff9f7;
-  --paper: #f7f1ed;
-  --blush: #f0c4cd;
-  --petal: #d9788c;
-  --sage: #9aaf9a;
-  --mist: #ebe4df;
+  --ink: #2a1c18;
+  --foam: #fff7f0;
+  --paper: #f2ddd0;
+  --blush: #e8c4a8;
+  --petal: #c45c38;
+  --sage: #b89a78;
+  --mist: #edd4c4;
+  --gold: #c9a05a;
+  --dusk: #5a3a42;
+  --ember: #c45c38;
   /* Inner row of the store header. Safe-area padding is added on the header. */
-  --site-header-row: 4rem;
-  --site-header-offset: calc(env(safe-area-inset-top, 0px) + var(--site-header-row));
+  --site-header-row: 4.25rem;
+  --site-header-offset: calc(
+    env(safe-area-inset-top, 0px) + var(--announcement-h, 0px) +
+      var(--site-header-row)
+  );
+  --announcement-h: 2.25rem;
 }
 
 @media (min-width: 768px) {
   :root {
-    --site-header-row: 4.5rem;
+    --site-header-row: 4.75rem;
   }
 }
 
 /*
-  Store header. Sticky (not fixed) so it stays in the scrolling layer:
+  Announcement + header stick as one unit (see SiteChrome).
+  Sticky (not fixed) so it stays in the scrolling layer:
   Chrome on iPhone draws its address bar at the top and resizes it on
   scroll and overscroll. A fixed bar is pinned to the layout viewport and
   slides under that toolbar; sticky rides with the visual viewport.
@@ -29,7 +41,7 @@
   padding-top clears the notch when viewport-fit=cover.
   JS may set `top` from visualViewport.offsetTop (never a transform).
 */
-.site-header {
+.site-chrome {
   position: sticky;
   top: 0;
   z-index: 50;
@@ -45,6 +57,9 @@
   --color-petal: var(--petal);
   --color-sage: var(--sage);
   --color-mist: var(--mist);
+  --color-gold: var(--gold);
+  --color-dusk: var(--dusk);
+  --color-ember: var(--ember);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
 }
@@ -52,7 +67,7 @@
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -66,12 +81,25 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.06);
+    transform: scale(1.04);
+  }
+}
+
+@keyframes shimmer-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
   }
 }
 
 .animate-fade-up {
-  animation: fade-up 0.85s ease-out both;
+  animation: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-up-delay {
+  animation: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
 }
 
 .animate-soft-pulse {
@@ -90,11 +118,12 @@ html {
 
 body {
   min-height: 100%;
-  background-color: var(--paper);
+  background-color: var(--foam);
   background-image:
-    radial-gradient(ellipse at 12% 0%, rgba(240, 196, 205, 0.45), transparent 42%),
-    radial-gradient(ellipse at 88% 8%, rgba(154, 175, 154, 0.18), transparent 38%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+    radial-gradient(ellipse at 8% -10%, rgba(232, 147, 106, 0.28), transparent 42%),
+    radial-gradient(ellipse at 92% 0%, rgba(201, 160, 90, 0.18), transparent 40%),
+    radial-gradient(ellipse at 50% 100%, rgba(90, 58, 66, 0.06), transparent 45%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   color: var(--ink);
   font-family: var(--font-body), system-ui, sans-serif;
 }
@@ -104,7 +133,7 @@ body {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--blush) 70%, white);
+  background: color-mix(in oklab, var(--blush) 65%, white);
   color: var(--ink);
 }
 
@@ -131,4 +160,68 @@ a {
   margin-top: 0.75rem;
   display: grid;
   gap: 0.4rem;
+}
+
+/* Primary CTA — sharp boutique corners like the reference, not pills */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.85rem 2rem;
+  background: var(--ink);
+  color: var(--foam);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: var(--ember);
+  color: var(--foam);
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.85rem 1.5rem;
+  border: 1px solid color-mix(in oklab, var(--foam) 55%, transparent);
+  color: var(--foam);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-ghost:hover {
+  background: color-mix(in oklab, var(--foam) 12%, transparent);
+  border-color: var(--foam);
+}
+
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ember);
+}
+
+.sunset-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--ink) 18%, transparent),
+    transparent
+  );
 }

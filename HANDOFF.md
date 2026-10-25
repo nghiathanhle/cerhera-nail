@@ -15,6 +15,9 @@ Nghia's requirements:
 - Inspiration site: https://nailcissist.com/
 - Vibe, feel, and theme: aesthetically it should be ethereal, and use the colors of a Sahara desert sunset as the palette.
 - Keep the items organized by collections.
+- US customers only — ignore international / currency / duties patterns from the reference site.
+
+**Implemented direction (storefront):** Nailcissist-like structure (announcement bar, centered lowercase logo, uppercase nav, collection tabs, 4-col product grid, PDP accordions, free-ship progress on cart) with a Sahara sunset token set (`--ink` dusk umber, `--foam` apricot white, `--paper` peach sand, `--ember` sunset coral, `--gold`). Collections live in `src/lib/collections.ts` (slug maps until a DB column exists): Sunset Soft, Dune Quiet, Ink Garden. Display font: Cormorant Garamond; body: Outfit.
 
 ---
 
@@ -491,9 +494,13 @@ Rules: `.env*` files stay mode 600 and gitignored (repo `.gitignore` has `.env*`
 
 Target look is **Design requirements** at the top of this file (ethereal, Sahara desert sunset palette, items organized by collections). What is built today:
 
-- Soft blush / warm ink / paper background + grain (avoid purple SaaS / cream-terracotta clichés)
-- Hero: brand-first, one headline, one CTA, full-bleed image
-- Cards only where interaction needs them; storefront is not a dashboard
+- Sahara sunset tokens + grain/atmosphere (not purple SaaS; not cream+#terracotta cliché)
+- Nailcissist-inspired IA: announcement, centered brand, Collections routes, shop-by-collection tabs
+- Hero: brand-first, one headline, CTA group, full-bleed image with sunset wash
+- Product cards: square image, uppercase name, sharp badges; 4-col desktop grid
+- PDP: full-width ATC, description / shipping / how-to accordions (no duties/tariffs copy)
+- Cart: free US shipping progress bar
+- Mobile menu for nav + collections
 - Mobile-first
 
 Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `node_modules/next/dist/docs/` before large framework changes.

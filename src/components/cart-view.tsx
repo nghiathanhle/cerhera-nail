@@ -46,6 +46,13 @@ export function CartView({
     settings.free_shipping_threshold_cents,
   );
   const total = subtotal + shipping;
+  const threshold = settings.free_shipping_threshold_cents;
+  const remaining =
+    threshold != null ? Math.max(0, threshold - subtotal) : null;
+  const progress =
+    threshold != null && threshold > 0
+      ? Math.min(100, (subtotal / threshold) * 100)
+      : 100;
 
   function checkout() {
     setError(null);
@@ -77,15 +84,14 @@ export function CartView({
 
   if (lines.length === 0) {
     return (
-      <div className="rounded-[1.5rem] border border-dashed border-ink/15 bg-foam/50 px-8 py-16 text-center">
-        <p className="font-display text-2xl text-ink">Your bag is empty</p>
+      <div className="border border-dashed border-ink/15 bg-paper/40 px-8 py-16 text-center">
+        <p className="font-display text-3xl lowercase text-ink">
+          Your bag is empty
+        </p>
         <p className="mt-2 text-sm text-ink/60">
           Pick a style and we’ll keep it soft from here.
         </p>
-        <Link
-          href="/shop/"
-          className="mt-8 inline-flex h-11 items-center rounded-full bg-ink px-6 text-sm text-foam"
-        >
+        <Link href="/shop/" className="btn-primary mt-8">
           Shop styles
         </Link>
       </div>
@@ -94,74 +100,94 @@ export function CartView({
 
   return (
     <div className="grid gap-10 lg:grid-cols-[1.4fr_0.9fr]">
-      <ul className="space-y-5">
-        {lines.map(({ item, product }) => {
-          const image = product.product_images[0];
-          return (
-            <li
-              key={product.id}
-              className="flex gap-4 rounded-[1.25rem] border border-ink/8 bg-foam/70 p-4"
-            >
-              <div className="h-28 w-24 shrink-0 overflow-hidden rounded-xl bg-mist">
-                {image && (
-                  <Image
-                    src={resolveImageUrl(image.storage_path)}
-                    alt={image.alt || product.name}
-                    width={96}
-                    height={112}
-                    className="h-full w-full object-cover"
-                    sizes="96px"
-                  />
-                )}
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <Link
-                      href={`/shop/${product.slug}/`}
-                      className="font-display text-xl text-ink hover:opacity-70"
-                    >
-                      {product.name}
-                    </Link>
-                    <p className="mt-1 text-sm text-ink/60">
-                      {formatUsd(product.price_cents)}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(product.id)}
-                    className="text-xs text-ink/45 hover:text-ink"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <div className="mt-auto flex items-center gap-3 pt-3">
-                  <label
-                    className="text-xs text-ink/50"
-                    htmlFor={`qty-${product.id}`}
-                  >
-                    Qty
-                  </label>
-                  <input
-                    id={`qty-${product.id}`}
-                    type="number"
-                    min={1}
-                    max={product.stock}
-                    value={item.quantity}
-                    onChange={(e) =>
-                      setQuantity(product.id, Number(e.target.value) || 1)
-                    }
-                    className="h-9 w-16 rounded-lg border border-ink/15 bg-paper px-2 text-sm"
-                  />
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      <div>
+        {threshold != null && (
+          <div className="mb-8 border border-ink/10 bg-paper/50 px-5 py-4">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink">
+              {remaining === 0
+                ? "You’ve unlocked free US shipping"
+                : `You are ${formatUsd(remaining!)} away from free US shipping`}
+            </p>
+            <div className="mt-3 h-1 w-full bg-ink/10">
+              <div
+                className="h-full bg-ember transition-[width] duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        )}
 
-      <aside className="h-fit rounded-[1.5rem] border border-ink/8 bg-foam/80 p-6">
-        <h2 className="font-display text-2xl text-ink">Summary</h2>
+        <ul className="space-y-5">
+          {lines.map(({ item, product }) => {
+            const image = product.product_images[0];
+            return (
+              <li
+                key={product.id}
+                className="flex gap-4 border border-ink/8 bg-foam/80 p-4"
+              >
+                <div className="h-28 w-24 shrink-0 overflow-hidden bg-mist">
+                  {image && (
+                    <Image
+                      src={resolveImageUrl(image.storage_path)}
+                      alt={image.alt || product.name}
+                      width={96}
+                      height={112}
+                      className="h-full w-full object-cover"
+                      sizes="96px"
+                    />
+                  )}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <Link
+                        href={`/shop/${product.slug}/`}
+                        className="text-sm font-semibold uppercase tracking-[0.1em] text-ink hover:opacity-70"
+                      >
+                        {product.name}
+                      </Link>
+                      <p className="mt-1 text-sm text-ink/60">
+                        {formatUsd(product.price_cents)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(product.id)}
+                      className="text-[0.65rem] uppercase tracking-[0.12em] text-ink/45 hover:text-ink"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="mt-auto flex items-center gap-3 pt-3">
+                    <label
+                      className="text-[0.65rem] uppercase tracking-[0.12em] text-ink/50"
+                      htmlFor={`qty-${product.id}`}
+                    >
+                      Qty
+                    </label>
+                    <input
+                      id={`qty-${product.id}`}
+                      type="number"
+                      min={1}
+                      max={product.stock}
+                      value={item.quantity}
+                      onChange={(e) =>
+                        setQuantity(product.id, Number(e.target.value) || 1)
+                      }
+                      className="h-9 w-16 border border-ink/15 bg-foam px-2 text-sm"
+                    />
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <aside className="h-fit border border-ink/10 bg-paper/40 p-6">
+        <h2 className="text-[0.75rem] font-semibold uppercase tracking-[0.16em] text-ink">
+          Summary
+        </h2>
         <dl className="mt-6 space-y-3 text-sm">
           <div className="flex justify-between text-ink/70">
             <dt>Subtotal</dt>
@@ -176,24 +202,16 @@ export function CartView({
             <dd>{formatUsd(total)}</dd>
           </div>
         </dl>
-        {settings.free_shipping_threshold_cents != null && shipping > 0 && (
-          <p className="mt-4 text-xs text-ink/50">
-            Free shipping over{" "}
-            {formatUsd(settings.free_shipping_threshold_cents)}.
-          </p>
-        )}
         {error && (
-          <p className="mt-4 rounded-xl bg-petal/15 px-3 py-2 text-sm text-ink">
-            {error}
-          </p>
+          <p className="mt-4 bg-ember/15 px-3 py-2 text-sm text-ink">{error}</p>
         )}
         <button
           type="button"
           onClick={checkout}
           disabled={pending}
-          className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-full bg-ink text-sm font-medium text-foam transition hover:bg-ink/90 disabled:opacity-50"
+          className="btn-primary mt-6 w-full"
         >
-          {pending ? "Redirecting…" : "Checkout with Stripe"}
+          {pending ? "Redirecting…" : "Check out"}
         </button>
         <p className="mt-3 text-center text-xs text-ink/45">
           Guest checkout · US addresses only

@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "./cart-provider";
+import { collections } from "@/lib/collections";
 import { cn } from "@/lib/cn";
 
-const links = [
+const primaryLinks = [
+  { href: "/", label: "Home" },
   { href: "/shop/", label: "Shop" },
-  { href: "/size-chart/", label: "Size chart" },
+  { href: "/collections/", label: "Collections" },
   { href: "/how-to-apply/", label: "How to apply" },
 ];
 
@@ -17,76 +19,57 @@ export function SiteHeader({ storeName }: { storeName: string }) {
   const { count, ready } = useCart();
   const isHome = pathname === "/";
   const [elevated, setElevated] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const overHero = isHome && !elevated;
 
   useEffect(() => {
-    const header = document.querySelector<HTMLElement>("[data-site-header]");
-    const viewport = window.visualViewport;
-    if (!header) return;
+    setMenuOpen(false);
+  }, [pathname]);
 
+  useEffect(() => {
     let frame = 0;
     const sync = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         setElevated(window.scrollY > 12);
-        if (!viewport) return;
-        // Chrome on iPhone shifts the visual viewport down while its top
-        // toolbar expands, and reports a negative offset during bounce.
-        // Move the sticky edge with `top` only — a transform would pin
-        // this bar to the layout viewport and let the toolbar cover it.
-        const offset = Math.max(0, viewport.offsetTop);
-        header.style.top = `${offset}px`;
       });
     };
 
     sync();
     window.addEventListener("scroll", sync, { passive: true });
     document.addEventListener("scroll", sync, { passive: true });
-    window.addEventListener("orientationchange", sync);
-    viewport?.addEventListener("scroll", sync);
-    viewport?.addEventListener("resize", sync);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", sync);
       document.removeEventListener("scroll", sync);
-      window.removeEventListener("orientationchange", sync);
-      viewport?.removeEventListener("scroll", sync);
-      viewport?.removeEventListener("resize", sync);
     };
   }, []);
 
   return (
-    <header
-      data-site-header
+    <div
       className={cn(
-        "site-header",
         overHero
-          ? "bg-ink/50 text-foam"
-          : "border-b border-ink/5 bg-paper text-ink",
+          ? "bg-ink/45 text-foam"
+          : "border-b border-ink/8 bg-foam/95 text-ink",
       )}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 md:h-[4.5rem] md:px-8">
-        <Link
-          href="/"
-          className="font-display text-2xl tracking-tight transition-opacity hover:opacity-70 md:text-[1.65rem]"
-        >
-          {storeName}
-        </Link>
-
+      <div className="relative mx-auto grid h-[4.25rem] max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 md:h-[4.75rem] md:px-8">
         <nav
           className={cn(
-            "hidden items-center gap-7 text-sm md:flex",
-            overHero ? "text-foam/80" : "text-ink/75",
+            "hidden items-center gap-6 text-[0.7rem] font-medium uppercase tracking-[0.16em] lg:flex",
+            overHero ? "text-foam/80" : "text-ink/70",
           )}
         >
-          {links.map((link) => (
+          {primaryLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
                 "transition-colors",
                 overHero ? "hover:text-foam" : "hover:text-ink",
-                pathname.startsWith(link.href) &&
+                (link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(link.href)) &&
                   (overHero ? "text-foam" : "text-ink"),
               )}
             >
@@ -95,26 +78,91 @@ export function SiteHeader({ storeName }: { storeName: string }) {
           ))}
         </nav>
 
-        <Link
-          href="/cart/"
+        <button
+          type="button"
           className={cn(
-            "inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm transition",
-            overHero
-              ? "border border-foam/40 bg-ink/55 text-foam hover:bg-ink/70"
-              : "border border-ink/15 bg-foam text-ink hover:border-ink/30",
+            "justify-self-start text-[0.7rem] font-medium uppercase tracking-[0.16em] lg:hidden",
+            overHero ? "text-foam/90" : "text-ink/80",
           )}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-nav"
+          onClick={() => setMenuOpen((v) => !v)}
         >
-          Bag
-          <span
+          {menuOpen ? "Close" : "Menu"}
+        </button>
+
+        <Link
+          href="/"
+          className="justify-self-center font-display text-[1.85rem] font-medium lowercase tracking-tight transition-opacity hover:opacity-75 md:text-[2.15rem]"
+        >
+          {storeName.toLowerCase()}
+        </Link>
+
+        <div className="flex items-center justify-end gap-3">
+          <Link
+            href="/cart/"
             className={cn(
-              "inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-petal px-1.5 text-[11px] font-medium text-foam",
-              ready && count > 0 && "font-semibold",
+              "inline-flex min-h-10 items-center gap-2 text-[0.7rem] font-medium uppercase tracking-[0.16em] transition",
+              overHero
+                ? "text-foam hover:text-foam/80"
+                : "text-ink hover:opacity-70",
             )}
           >
-            {ready ? count : 0}
-          </span>
-        </Link>
+            Bag
+            <span
+              className={cn(
+                "inline-flex h-5 min-w-5 items-center justify-center bg-ember px-1.5 text-[10px] font-semibold text-foam",
+                ready && count > 0 && "animate-soft-pulse",
+              )}
+            >
+              {ready ? count : 0}
+            </span>
+          </Link>
+        </div>
       </div>
-    </header>
+
+      {menuOpen && (
+        <div
+          id="mobile-nav"
+          className={cn(
+            "border-t px-5 py-5 lg:hidden",
+            overHero
+              ? "border-foam/15 bg-ink/90 text-foam"
+              : "border-ink/8 bg-foam text-ink",
+          )}
+        >
+          <ul className="space-y-4 text-[0.75rem] font-medium uppercase tracking-[0.16em]">
+            {primaryLinks.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} onClick={() => setMenuOpen(false)}>
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p
+            className={cn(
+              "mt-6 text-[0.65rem] uppercase tracking-[0.18em]",
+              overHero ? "text-foam/50" : "text-ink/45",
+            )}
+          >
+            Collections
+          </p>
+          <ul className="mt-3 space-y-3 text-sm">
+            {collections.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={`/collections/${c.slug}/`}
+                  className="font-display text-lg lowercase"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {c.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
