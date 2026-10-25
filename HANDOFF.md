@@ -35,7 +35,7 @@ E‑commerce storefront for **Cerhera Nails** (press-on nail styles).
 - US shipping only; flat rate from `site_settings`
 - Guest checkout via Stripe Checkout (hosted)
 - No customer accounts
-- Light admin (magic-link email allowlist) for styles + order fulfillment
+- Light admin (magic-link email allowlist today; email + password login is an upcoming PR) for styles + order fulfillment
 - Stack: Next.js **static export** + Cloudflare Pages (was GitHub Pages) + Supabase (self-hosted on pi-1 for now; Supabase Cloud later) + Stripe
 
 Placeholder brand was “Petal Press”; renamed to Cerhera Nails. User may rename again later via `site_settings.store_name` + metadata.
@@ -143,10 +143,12 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 - [x] Prod `DISABLE_SIGNUP=true` (2026-10-24); public `/auth/v1/signup` and OTP user-creation return 422 `signup_disabled`
 - [x] Prod admin auth user `nghiathanhle.25@gmail.com` created 2026-10-24 (email confirmed; random password generated on pi-1 and discarded — login is magic link only)
 - [x] Prod admin auth user `angela.nguyen646@gmail.com` created 2026-10-24 (email confirmed, random password discarded; no login link issued — she needs SMTP-delivered magic link or an operator-generated link)
+- [x] Admin RLS migration `supabase/migrations/20261025010000_admin_only_rls.sql` merged to `main` (PR #2). It is being applied to the **test** and **prod** databases on pi-1. Seed `public.admins` for both emails after it is applied (see Security notes)
 
 ### Not done / in progress
 
-- [ ] **Lock down admin before real use** (see Security → RLS/signup)
+- [ ] Finish applying `20261025010000_admin_only_rls.sql` on the Pi test DB, then prod, and confirm both admin rows exist
+- [ ] **Upcoming:** email + password admin login (`signInWithPassword`), with magic link kept as a fallback, plus Change password (`updateUser({ password })`, minimum 12 characters) so an admin can set a first password after one magic-link login. Separate PR; not in this branch. Login today is still magic link only
 - [ ] Deploy Edge Functions to self-hosted Supabase (`~/supabase/volumes/functions/` currently only has the stock `main` + `hello`) + set Stripe secrets
 - [ ] Create Stripe account (test) + webhook to `https://api.cerheranails.com/functions/v1/stripe-webhook`
 - [ ] Verify admin login end-to-end (one-time link issued 2026-10-24 for Nghia; Angela has no link yet — see Security notes)
@@ -166,7 +168,7 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 2. **Bake public env into the static build.** Changing Supabase URL/key after deploy requires rebuild + redeploy (Cloudflare Pages: change env var → retry deployment).
 3. **Base path:** set `NEXT_PUBLIC_BASE_PATH=/cerhera-nail` only for GitHub Pages. Leave it **unset** for `npm run dev`, Cloudflare Pages (cerheranails.com) and the pi-1 test site.
 4. **Do not use Next API routes** for checkout/webhooks on this hosting model.
-5. **Admin security:** allowlist is `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com` (client-visible, UI-only). RLS allows *any* authenticated user to write products and read/update orders. Prod has `DISABLE_SIGNUP=true` so only operator-created users exist; keep it that way (test stack still allows signups). Adding an `admins` table to RLS is still recommended.
+5. **Admin security:** allowlist is `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com` (client-visible, UI-only). Migration `20261025010000_admin_only_rls.sql` is merged and is being applied on the Pi. Once applied, catalog writes, storage writes, and order reads require `public.is_admin()`. An empty `admins` table locks those operations. Prod has `DISABLE_SIGNUP=true`; the test stack still allows signups.
 6. **OAuth `workflow` scope:** early push of `.github/workflows` failed once; file exists on `main` now. GitHub Pages source is **legacy `gh-pages` branch**, not Actions.
 7. **Never expose Postgres** (5432 / 6543 or test 54322 / 56543) through the tunnel or router. The tunnel only routes the Supabase API paths listed below.
 8. **pi-1 Wi-Fi is flaky** — SSH may drop; retry. Use `ssh -o BatchMode=yes nghia@192.168.1.231` from the Mac mini.
@@ -350,9 +352,10 @@ See “Environment variables read by the app” and the Cloudflare Pages table. 
 | Allowlist (prod site) | Cloudflare Pages project `cerhera-nail` → `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`. This value is live and the production build has been redeployed. Changing it requires another redeploy |
 | Allowlist (test site) | `~/cerhera-nail-test/.env.local` on pi-1 → `NEXT_PUBLIC_ADMIN_EMAILS`; then `./build.sh` + `docker restart cerhera-nail-test-web` |
 | Prod auth users | Both emails exist in prod `auth.users` (created via GoTrue admin API on pi-1; signups are disabled, so new admins must be added the same way or via Studio → Authentication → Add user) |
+| Database admins | Migration `20261025010000_admin_only_rls.sql` is merged and being applied on pi-1 test, then prod. After it is applied, insert both users into `public.admins` (Security notes). The UI allowlist does not do this |
 | Test auth users | None (test stack still allows signups) |
 
-The allowlist is UI-only; adding an email there without creating the auth user (prod) does nothing, and an auth user not on the list is still blocked by the UI but **not** by RLS.
+The allowlist is UI-only until the RLS migration is applied on that database. After it is applied, an auth user who is not in `public.admins` cannot write the catalog or read orders, even if the email is allowlisted. Adding an email to the allowlist without creating the auth user still does nothing.
 
 ---
 
@@ -394,14 +397,34 @@ Rules: `.env*` files stay mode 600 and gitignored (repo `.gitignore` has `.env*`
 - **No hardcoded credentials** found in the repo working tree or full git history (all branches): no JWTs, `sk_live`/`sk_test`/`whsec_` values, or passwords. `.env.example` / README contain only placeholders (`sk_test_...`, `whsec_...`). Edge Functions read secrets via `Deno.env.get`.
 - Supabase compose dirs: no hardcoded secrets outside `.env`; matches are upstream scripts/tests that read `.env` or use `changeme` test fixtures.
 - `.env`, `.env.local`, `.env.bak-*` are mode 600 and gitignored. Built `out/` bundles contain the **test anon** JWT (expected; public key).
-- **Partly mitigated — admin authorization:** RLS policies still grant `authenticated` full product/image/settings writes and order read/update; the email allowlist is only enforced in the UI (`NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`). Prod signups are disabled and both operator admin users exist, so a stranger cannot self-serve an account on prod; the test stack still allows signups (`DISABLE_SIGNUP=false`). Remaining fix: add an `admins` table and change policies to `using (exists (select 1 from public.admins where user_id = auth.uid()))`.
+- **Admin authorization (migration merged, apply in progress):** `supabase/migrations/20261025010000_admin_only_rls.sql` is on `main` and is being applied to the test and prod databases on pi-1. It adds `public.admins` and `public.is_admin()` (`security definer`, empty `search_path`). Catalog writes, `product-images` storage writes, order read/update, and `order_items` read require `is_admin()`. Inactive products and all product images are admin-only. Public read of `site_settings`, active products, images of active products, and the public bucket is unchanged. `create-checkout`, `stripe-webhook`, and `order-status` use the service role and bypass RLS. The allowlist `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com` is still only the UI check. Each address also needs a row in `public.admins`.
 - Prod Postgres/pooler ports are bound to `127.0.0.1` (fixed 2026-10-24).
-- Prod public signups disabled (`DISABLE_SIGNUP=true`, fixed 2026-10-24). Admin users must be created by an operator (Studio → Authentication → Add user, on the LAN dashboard). Admin login is magic link (`signInWithOtp` in `src/app/admin/login/page.tsx`), which needs working SMTP.
+- Prod public signups disabled (`DISABLE_SIGNUP=true`, fixed 2026-10-24). Admin users must be created by an operator (Studio → Authentication → Add user, on the LAN dashboard). Login today is still magic link (`signInWithOtp` in `src/app/admin/login/page.tsx`), which needs working SMTP. An upcoming PR adds email + password sign-in and a Change password form (minimum 12 characters) and keeps the magic link as a fallback. No default password belongs in the repo.
 - **Admin users / one-time login (no SMTP yet):** both prod auth users exist (`nghiathanhle.25@gmail.com` and `angela.nguyen646@gmail.com`). A login link was issued for Nghia only; Angela has no link yet. With signups disabled and no working SMTP, links are issued on pi-1 only, using the GoTrue admin API at `http://localhost:8000/auth/v1` with `SERVICE_ROLE_KEY` read from `~/supabase/.env` inside a remote Python script (key never on a command line or in logs):
   1. `POST /admin/users` `{email, password: <random, discarded>, email_confirm: true}`
   2. `POST /admin/generate_link` `{type: "magiclink", email, redirect_to: "https://cerheranails.com/admin/"}` → `action_link` on `https://api.cerheranails.com/auth/v1/verify` (host comes from `API_EXTERNAL_URL`)
   Links are single use and expire after `MAILER_OTP_EXP` (not set in `.env` → GoTrue default 86400 s / 24 h). Repeat step 2 to issue a new link until SMTP is configured; then use the normal login page.
-- Remaining hardening: replace UI-only allowlist with an `admins` table in RLS (defence in depth).
+- Seed both database admins after the migration is applied on that database. No password in this step. On prod both auth users already exist. Run as `postgres`:
+
+```sql
+insert into public.admins (user_id)
+select id from auth.users
+where email in (
+  'nghiathanhle.25@gmail.com',
+  'angela.nguyen646@gmail.com'
+);
+```
+
+Confirm both rows:
+
+```sql
+select u.email
+from public.admins a
+join auth.users u on u.id = a.user_id
+order by u.email;
+```
+
+Apply on the test stack first, then prod. Seed whichever auth users should administer test the same way. An empty `admins` table means no authenticated user can write the catalog or read orders.
 
 ---
 
@@ -411,6 +434,7 @@ Rules: `.env*` files stay mode 600 and gitignored (repo `.gitignore` has `.env*`
 - `products`: name, slug, description, price_cents, stock, active, featured, sort_order
 - `product_images`: `storage_path` may be full `https://` URL or Storage path under bucket `product-images`
 - `orders` / `order_items`: written by webhook; statuses `pending|paid|shipped|cancelled`
+- `admins`: `user_id` of operators allowed to manage the catalog and fulfill orders. Not exposed through the Data API. From migration `20261025010000_admin_only_rls.sql`
 
 ---
 
@@ -428,11 +452,13 @@ Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `n
 ## Suggested next steps for the next agent
 
 1. Confirm https://cerheranails.com, https://www.cerheranails.com, and https://cerhera-nail.pages.dev serve the production build against the Pi Supabase. `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com` is already set and that build was redeployed. GitHub Pages (`gh-pages`) stays up as the legacy site.
-2. Configure real SMTP on prod, then verify magic-link login for both existing admin users. Until SMTP works, issue a one-time link on pi-1 (see Security notes). Angela does not have a link yet. Add an `admins` table to RLS.
-3. Deploy Edge Functions + Stripe test keys on pi-1; smoke-test checkout with `4242…`
-4. DHCP reservation (or Ethernet) for pi-1; turn on Cloudflare “Always Use HTTPS”. Prod Postgres ports are already bound to `127.0.0.1` and prod signups are already disabled.
-5. Replace Unsplash with real product photos via admin or Storage
-6. When ready, migrate to Supabase Cloud (checklist above)
+2. Finish applying the merged admin RLS migration on pi-1 test, then prod, and seed both `public.admins` rows (see Security notes).
+3. Upcoming password-login PR: email + password sign-in, magic link as fallback, Change password with a 12-character minimum. Until that lands, login stays magic link.
+4. Configure real SMTP on prod, then verify login for both existing admin users. Until SMTP works, issue a one-time link on pi-1 (see Security notes). Angela does not have a link yet.
+5. Deploy Edge Functions + Stripe test keys on pi-1; smoke-test checkout with `4242…`
+6. DHCP reservation (or Ethernet) for pi-1; turn on Cloudflare “Always Use HTTPS”. Prod Postgres ports are already bound to `127.0.0.1` and prod signups are already disabled.
+7. Replace Unsplash with real product photos via admin or Storage
+8. When ready, migrate to Supabase Cloud (checklist above)
 
 ---
 
@@ -443,6 +469,6 @@ Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `n
 - User asked to traverse broken Pages site → root cause was missing CSS (`_next` 404 + uncompiled Tailwind), fixed in commits `693c47e` and `519754e`
 - User asked what integrations are needed and how to set up Supabase/Stripe (answered; not yet executed with real keys)
 - 2026-10-24: self-hosted Supabase on pi-1 (prod + test), Cloudflare Tunnel, domain cerheranails.com, test site at test.cerheranails.com, prod DB seeded, move to Cloudflare Pages started. User plans to test on pi-1 Supabase, then move to Supabase Cloud.
-- 2026-10-25: Cloudflare Pages custom domains are Active with SSL. The production build uses the Pi Supabase and was redeployed with `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`. GitHub Pages remains the legacy deploy.
+- 2026-10-25: Cloudflare Pages custom domains are Active with SSL. The production build uses the Pi Supabase and was redeployed with `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`. Admin RLS migration merged and is being applied on the Pi. GitHub Pages remains the legacy deploy.
 
 Do not edit the original plan file at `~/.cursor/plans/petal_press_store_*.plan.md` unless the user asks.
