@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAdminUser } from "@/lib/admin-guard";
 import { formatUsd } from "@/lib/money";
@@ -188,13 +189,21 @@ export function AdminDashboard() {
             Manage styles and fulfill US orders.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={signOut}
-          className="text-sm text-ink/55 hover:text-ink"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/admin/account/"
+            className="text-sm text-ink/55 hover:text-ink"
+          >
+            Change password
+          </Link>
+          <button
+            type="button"
+            onClick={signOut}
+            className="text-sm text-ink/55 hover:text-ink"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       <div className="mt-8 flex gap-2">

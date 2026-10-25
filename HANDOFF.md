@@ -35,7 +35,7 @@ E‑commerce storefront for **Cerhera Nails** (press-on nail styles).
 - US shipping only; flat rate from `site_settings`
 - Guest checkout via Stripe Checkout (hosted)
 - No customer accounts
-- Light admin (magic-link email allowlist) for styles + order fulfillment
+- Light admin (email + password for the allowlist; magic link is a fallback) for styles + order fulfillment
 - Stack: Next.js **static export** + Cloudflare Pages (was GitHub Pages) + Supabase (self-hosted on pi-1 for now; Supabase Cloud later) + Stripe
 
 Placeholder brand was “Petal Press”; renamed to Cerhera Nails. User may rename again later via `site_settings.store_name` + metadata.
@@ -121,7 +121,7 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 - [x] Static export for GitHub Pages with `basePath=/cerhera-nail`
 - [x] Demo catalog fallback (6 styles)
 - [x] Cart + Stripe Checkout flow wired to Edge Functions (code present; not production-configured)
-- [x] Admin magic-link UI + dashboard (needs Supabase Auth + allowlist)
+- [x] Admin login (email + password, magic link as a fallback) + dashboard (needs Supabase Auth + allowlist)
 - [x] Content pages: size chart, how to apply, care, shipping, returns, privacy
 - [x] Schema migration + seed SQL
 - [x] Edge Functions: `create-checkout`, `stripe-webhook`, `order-status`
@@ -146,13 +146,13 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 - [ ] **Cloudflare Pages project `cerhera-nail`** — Git connection needs GitHub authorization of the “Cloudflare Workers and Pages” app; then build settings + env vars + custom domains `cerheranails.com` and `www.cerheranails.com`
 - [ ] Deploy Edge Functions to self-hosted Supabase (`~/supabase/volumes/functions/` currently only has the stock `main` + `hello`) + set Stripe secrets
 - [ ] Create Stripe account (test) + webhook to `https://api.cerheranails.com/functions/v1/stripe-webhook`
-- [x] Prod admin auth user `nghiathanhle.25@gmail.com` created 2026-10-24 (email confirmed; random password generated on pi-1 and discarded — login is magic link only)
-- [x] Prod admin auth user `angela.nguyen646@gmail.com` created 2026-10-24 (email confirmed, random password discarded; no login link issued — she needs SMTP-delivered magic link or an operator-generated link)
-- [ ] Verify admin login end-to-end (one-time link issued 2026-10-24, see Security notes)
+- [x] Prod admin auth user `nghiathanhle.25@gmail.com` created 2026-10-24 (email confirmed; the random password generated on pi-1 was discarded). Sign-in is email + password once the admin sets one at `/admin/account/`; until then use a magic link (see Admin login)
+- [x] Prod admin auth user `angela.nguyen646@gmail.com` created 2026-10-24 (email confirmed, random password discarded; no login link issued — she needs one magic-link session, then Change password)
+- [ ] Verify admin login end-to-end: one magic-link session, set a password at `/admin/account/`, then sign in with email and password (see Admin login)
 - [ ] Real product photos (still Unsplash placeholders)
 - [x] Prod pooler ports 5432/6543 bound to `127.0.0.1` (2026-10-24). Note: `update.sh` / upstream compose updates may revert this edit — re-check after updating.
 - [x] Prod `DISABLE_SIGNUP=true` (2026-10-24); public `/auth/v1/signup` and OTP user-creation return 422 `signup_disabled`
-- [ ] **Configure real SMTP on prod** — `SMTP_HOST` is still the template placeholder `supabase-mail` (no mail container), so magic links cannot be delivered
+- [ ] **Configure real SMTP on prod** — `SMTP_HOST` is still the template placeholder `supabase-mail` (no mail container), so the magic-link fallback cannot be delivered. Password sign-in does not need SMTP after a password is set
 - [ ] Add `**.cerheranails.com` (or `api.cerheranails.com`) to `images.remotePatterns` in `next.config.ts` if Storage images are ever rendered through next/image
 - [ ] Turn on Cloudflare “Always Use HTTPS”
 - [ ] DHCP reservation (or Ethernet) for pi-1 — it is on Wi-Fi with a dynamic `192.168.1.231`
@@ -167,7 +167,7 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 2. **Bake public env into the static build.** Changing Supabase URL/key after deploy requires rebuild + redeploy (Cloudflare Pages: change env var → retry deployment).
 3. **Base path:** set `NEXT_PUBLIC_BASE_PATH=/cerhera-nail` only for GitHub Pages. Leave it **unset** for `npm run dev`, Cloudflare Pages (cerheranails.com) and the pi-1 test site.
 4. **Do not use Next API routes** for checkout/webhooks on this hosting model.
-5. **Admin security:** `NEXT_PUBLIC_ADMIN_EMAILS` is only a client-visible UI check. Postgres enforces admin access via `public.admins` + `public.is_admin()` (migration `20261025010000_admin_only_rls.sql`, applied on test and prod). An allowlisted user with no `admins` row sees empty admin lists / RLS errors on save; an empty `admins` table locks catalog writes and order reads for every logged-in user. Prod also keeps `DISABLE_SIGNUP=true`.
+5. **Admin security:** `NEXT_PUBLIC_ADMIN_EMAILS` is only a client-visible UI check. Password login does not replace it. Postgres enforces admin access via `public.admins` + `public.is_admin()` (migration `20261025010000_admin_only_rls.sql`, applied on test and prod). An allowlisted user with no `admins` row sees empty admin lists / RLS errors on save; an empty `admins` table locks catalog writes and order reads for every logged-in user. Prod also keeps `DISABLE_SIGNUP=true`. See Admin login.
 6. **OAuth `workflow` scope:** early push of `.github/workflows` failed once; file exists on `main` now. GitHub Pages source is **legacy `gh-pages` branch**, not Actions.
 7. **Never expose Postgres** (5432 / 6543 or test 54322 / 56543) through the tunnel or router. The tunnel only routes the Supabase API paths listed below.
 8. **pi-1 Wi-Fi is flaky** — SSH may drop; retry. Use `ssh -o BatchMode=yes nghia@192.168.1.231` from the Mac mini.
@@ -331,7 +331,7 @@ curl -sL https://nghiathanhle.github.io/cerhera-nail/ | grep -o '<title>[^<]*'
 ### Supabase (self-hosted on pi-1, current)
 
 1. ~~Run migration SQL + `seed.sql`~~ — done on prod and test (2026-10-24)
-2. Auth redirect URLs are set via `ADDITIONAL_REDIRECT_URLS` in the stack `.env` (+ `docker compose up -d auth`). Admin magic link lands on `/admin/`.
+2. Auth redirect URLs are set via `ADDITIONAL_REDIRECT_URLS` in the stack `.env` (+ `docker compose up -d auth`). Email + password is the admin sign-in. Magic link remains a fallback and lands on `/admin/`.
 3. Deploy Edge Functions into `volumes/functions/` (see pi-1 section)
 4. Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` in `~/supabase/.env`; `SUPABASE_SERVICE_ROLE_KEY` = `SERVICE_ROLE_KEY` from the same file
 
@@ -360,7 +360,7 @@ See “Environment variables read by the app” and the Cloudflare Pages table. 
 | Test auth users | None (test stack still allows signups) |
 | DB admin rows (`public.admins`) | Prod: both emails (seeded 2026-10-24). Test: none |
 
-Admin access needs **three** things: (1) an auth user (prod: operator-created, signups disabled), (2) a row in `public.admins`, (3) the email in `NEXT_PUBLIC_ADMIN_EMAILS` so the UI shows the dashboard. Only (2) is enforced by Postgres; (3) is UI-only.
+Admin access needs **three** things: (1) an auth user (prod: operator-created, signups disabled), (2) a row in `public.admins`, (3) the email in `NEXT_PUBLIC_ADMIN_EMAILS` so the UI shows the dashboard. Only (2) is enforced by Postgres; (3) is UI-only. Sign-in is email + password (see Admin login). There is no default password in the repo.
 
 Seed / add an admin (run as `postgres` on the Pi, never through the API; no password involved):
 
@@ -374,6 +374,17 @@ SQL
 ```
 
 If the select doesn't list the email, that auth user doesn't exist in that database yet: create it first (GoTrue admin API on the Pi, or Studio → Authentication → Add user), then re-run. Remove an admin with `delete from public.admins where user_id = (select id from auth.users where email = '...');` (deleting the auth user also cascades). For the test stack use `supabase-test-db`; it has no users, so create a test auth user (signups are open there) before seeding it.
+
+---
+
+## Admin login
+
+- `/admin/login/` signs in with email and password via `supabase.auth.signInWithPassword`. `NEXT_PUBLIC_ADMIN_EMAILS` is still checked first (`src/lib/env.ts`), and `getAdminUser()` in `src/lib/admin-guard.ts` rejects any session whose email is not on that list.
+- Allowlist: `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`.
+- Magic link (`signInWithOtp`, `shouldCreateUser: false`) is a secondary control on the same page, for the first sign-in before a password exists. There is no sign-up form. Public signups stay disabled on the server.
+- Wrong password, an unknown address, and an address that is not on the allowlist all show “Email or password is incorrect.” The magic-link form always shows the same “if that address is an admin” message. Neither form says whether an email exists.
+- A signed-in admin sets or changes a password at `/admin/account/` (also linked from the dashboard) with `supabase.auth.updateUser({ password })`. The new password and the confirmation must match and be at least 12 characters. That is how an admin sets a first password after one magic-link login.
+- No default password is stored in the repo. Password login does not replace the allowlist or `public.admins` / `is_admin()`.
 
 ---
 
@@ -405,7 +416,7 @@ Rules: `.env*` files stay mode 600 and gitignored (repo `.gitignore` has `.env*`
 6. Edge Functions: `npx supabase functions deploy create-checkout stripe-webhook order-status`; `npx supabase secrets set STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=...`.
 7. Stripe: point the webhook to `https://<ref>.supabase.co/functions/v1/stripe-webhook`; update signing secret.
 8. Site: in Cloudflare Pages set `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` to Cloud values; redeploy; add `**.supabase.co` (already in `images.remotePatterns`).
-9. Verify: products load, admin magic link, test checkout with `4242…`, order appears.
+9. Verify: products load, admin email + password sign-in, test checkout with `4242…`, order appears.
 10. Decommission: remove/ disable the `api.cerheranails.com` tunnel route (keep test if wanted), `docker compose down` prod stack after a final backup, rotate any keys that were ever shared.
 
 ---
@@ -422,11 +433,11 @@ Rules: `.env*` files stay mode 600 and gitignored (repo `.gitignore` has `.env*`
   - Public reads unchanged (site settings, active products, their images, public bucket objects). Edge Functions use the service role and bypass RLS, so checkout / webhook / order-status need no admin row.
   - Verified on prod 2026-10-24: anon reads 6 products via https://api.cerheranails.com; anon insert → 401 RLS violation; anon update → 0 rows changed; anon orders → `[]`. In a rolled-back SQL transaction a non-admin `authenticated` JWT (random uid) saw `is_admin=false`, 0 orders, update matched 0 rows and insert failed RLS; Nghia's uid saw `is_admin=true` and could update all 6 rows (rolled back, no data changed).
 - Prod Postgres/pooler ports are bound to `127.0.0.1` (fixed 2026-10-24).
-- Prod public signups disabled (`DISABLE_SIGNUP=true`, fixed 2026-10-24). Admin users must be created by an operator (Studio → Authentication → Add user, on the LAN dashboard). Admin login is magic link (`signInWithOtp` in `src/app/admin/login/page.tsx`), which needs working SMTP.
+- Prod public signups disabled (`DISABLE_SIGNUP=true`, fixed 2026-10-24). Admin users must be created by an operator (Studio → Authentication → Add user, on the LAN dashboard). There is no sign-up form. Admin sign-in is email + password (`signInWithPassword` in `src/app/admin/login/page.tsx`); magic link (`signInWithOtp`) is only a fallback and needs working SMTP. See Admin login.
 - **Admin user / one-time login (no SMTP yet):** with signups disabled and no working SMTP, the admin user was created and a login link issued on pi-1 only, using the GoTrue admin API at `http://localhost:8000/auth/v1` with `SERVICE_ROLE_KEY` read from `~/supabase/.env` inside a remote Python script (key never on a command line or in logs):
   1. `POST /admin/users` `{email, password: <random, discarded>, email_confirm: true}`
   2. `POST /admin/generate_link` `{type: "magiclink", email, redirect_to: "https://cerheranails.com/admin/"}` → `action_link` on `https://api.cerheranails.com/auth/v1/verify` (host comes from `API_EXTERNAL_URL`)
-  Links are single use and expire after `MAILER_OTP_EXP` (not set in `.env` → GoTrue default 86400 s / 24 h). Repeat step 2 to issue a new link until SMTP is configured; then use the normal login page.
+  Links are single use and expire after `MAILER_OTP_EXP` (not set in `.env` → GoTrue default 86400 s / 24 h). Repeat step 2 to issue a new link until SMTP is configured. After that one sign-in, set a password at `/admin/account/`; later sign-ins use email and password and do not need mail.
 
 ---
 
@@ -454,7 +465,7 @@ Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `n
 ## Suggested next steps for the next agent
 
 1. Finish Cloudflare Pages (`cerhera-nail`): GitHub app authorization, env vars, custom domains, verify
-2. Configure real SMTP on prod, verify magic-link login for both admins (users + `public.admins` rows already exist)
+2. Each admin: one magic-link sign-in (SMTP still unset, so an operator-issued link), then set a password at `/admin/account/` and confirm email + password login. Users and `public.admins` rows already exist. Configure real SMTP so the magic-link fallback can be delivered.
 3. Deploy Edge Functions + Stripe test keys on pi-1; smoke-test checkout with `4242…`
 4. DHCP reservation for pi-1; Always Use HTTPS
 5. Replace Unsplash with real product photos via admin or Storage
