@@ -1,10 +1,20 @@
 # Cerhera Nails — Agent Handoff
 
-Last updated: 2026-10-24 (America/New_York)
+Last updated: 2026-10-25 (America/New_York)
 
 Use this document to continue work without re-discovering context. Prefer this over reconstructing history from chat.
 
 > **No secrets in this file.** It records only *where* secrets live (e.g. `~/supabase/.env` on pi-1, vault entry names). Never paste key values here.
+
+---
+
+## Design requirements
+
+Nghia's requirements:
+
+- Inspiration site: https://nailcissist.com/
+- Vibe, feel, and theme: aesthetically it should be ethereal, and use the colors of a Sahara desert sunset as the palette.
+- Keep the items organized by collections.
 
 ---
 
@@ -156,7 +166,7 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 - [ ] **Configure real SMTP on prod** — `SMTP_HOST` is still the template placeholder `supabase-mail` (no mail container), so the magic-link fallback cannot be delivered. Password sign-in does not need SMTP after a password is set
 - [ ] Add `**.cerheranails.com` (or `api.cerheranails.com`) to `images.remotePatterns` in `next.config.ts` if Storage images are ever rendered through next/image
 - [ ] Turn on Cloudflare “Always Use HTTPS”
-- [ ] DHCP reservation (or Ethernet) for pi-1 — it is on Wi-Fi with a dynamic `192.168.1.231`
+- [ ] DHCP reservation (or Ethernet) for pi-1 — Wi-Fi, dynamic `192.168.1.236` on the AT&T Fiber gateway (reservation pending). The IP can change until it is reserved. Reach the Pi at `pi-1.local`
 - [ ] Retire or update `.github/workflows/deploy.yml` (GitHub Pages) once Cloudflare Pages is live
 - [ ] Later: migrate to Supabase Cloud (checklist below)
 - [ ] Rename npm package / cart storage key from `petal-press` if desired
@@ -171,7 +181,7 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 5. **Admin security:** `NEXT_PUBLIC_ADMIN_EMAILS` is only a client-visible UI check. Password login does not replace it. Postgres enforces admin access via `public.admins` + `public.is_admin()` (migration `20261025010000_admin_only_rls.sql`, applied on test and prod). An allowlisted user with no `admins` row sees empty admin lists / RLS errors on save; an empty `admins` table locks catalog writes and order reads for every logged-in user. Prod also keeps `DISABLE_SIGNUP=true`. See Admin login.
 6. **OAuth `workflow` scope:** early push of `.github/workflows` failed once; file exists on `main` now. GitHub Pages source is **legacy `gh-pages` branch**, not Actions.
 7. **Never expose Postgres** (5432 / 6543 or test 54322 / 56543) through the tunnel or router. The tunnel only routes the Supabase API paths listed below.
-8. **pi-1 Wi-Fi is flaky** — SSH may drop; retry. Use `ssh -o BatchMode=yes nghia@192.168.1.231` from the Mac mini.
+8. **pi-1 Wi-Fi is flaky** — SSH may drop; retry. Use `ssh -o BatchMode=yes nghia@pi-1.local` from the Mac mini. Current lease is `192.168.1.236` (was `192.168.1.231`); it can change until the AT&T Fiber gateway has a DHCP reservation.
 
 ---
 
@@ -180,8 +190,8 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 | Item | Value |
 |------|-------|
 | Host | `pi-1`, Debian 13 (trixie) aarch64, 8 GB RAM |
-| LAN IP | `192.168.1.231` (DHCP on `wlan0` — not reserved yet) |
-| Access | `ssh nghia@192.168.1.231` (key auth from Nghia's Mac mini, `~/.ssh/id_ed25519`); `nghia` has passwordless sudo |
+| LAN IP | `192.168.1.236` (DHCP on `wlan0`, AT&T Fiber gateway — reservation pending; was `192.168.1.231`). The address can change until it is reserved. Prefer `pi-1.local` |
+| Access | `ssh nghia@pi-1.local` (currently also `nghia@192.168.1.236`; key auth from Nghia's Mac mini, `~/.ssh/id_ed25519`); `nghia` has passwordless sudo |
 | Runtime | Docker + docker compose |
 
 ### Supabase stacks (self-hosted docker compose, Envoy gateway)
@@ -197,9 +207,9 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 | Gateway (Envoy) | `0.0.0.0:8000` (LAN) | `0.0.0.0:8001` (LAN) |
 | Public URL | https://api.cerheranails.com | https://api-test.cerheranails.com |
 | Postgres / pooler host ports | `127.0.0.1:5432`, `127.0.0.1:6543` (localhost only; edited in `docker-compose.yml`, backup `docker-compose.yml.bak-20261024-204316`) | `127.0.0.1:54322`, `127.0.0.1:56543` (localhost only) |
-| `SITE_URL` | `https://cerheranails.com` | `http://192.168.1.231:8001` |
+| `SITE_URL` | `https://cerheranails.com` | `http://192.168.1.236:8001` (IP can change until reserved; hostname `pi-1.local`) |
 | `ADDITIONAL_REDIRECT_URLS` | `https://nghiathanhle.github.io,https://cerheranails.com,https://www.cerheranails.com` | `http://localhost:3000,https://nghiathanhle.github.io,https://test.cerheranails.com` |
-| Studio | LAN only, `http://192.168.1.231:8000/` (basic auth `DASHBOARD_USERNAME`/`DASHBOARD_PASSWORD` in `.env`); **not** routed by the tunnel | LAN only, `:8001` |
+| Studio | LAN only, `http://192.168.1.236:8000/` (or `http://pi-1.local:8000/`; basic auth `DASHBOARD_USERNAME`/`DASHBOARD_PASSWORD` in `.env`); **not** routed by the tunnel. IP can change until reserved | LAN only, `http://192.168.1.236:8001` (or `http://pi-1.local:8001/`) |
 
 Compose services: `db imgproxy rest storage studio api-gw functions meta realtime supavisor auth`.
 
@@ -479,6 +489,8 @@ Rules: `.env*` files stay mode 600 and gitignored (repo `.gitignore` has `.env*`
 
 ## Design notes
 
+Target look is **Design requirements** at the top of this file (ethereal, Sahara desert sunset palette, items organized by collections). What is built today:
+
 - Soft blush / warm ink / paper background + grain (avoid purple SaaS / cream-terracotta clichés)
 - Hero: brand-first, one headline, one CTA, full-bleed image
 - Cards only where interaction needs them; storefront is not a dashboard
@@ -493,7 +505,7 @@ Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `n
 1. Finish Cloudflare Pages (`cerhera-nail`): GitHub app authorization, env vars, custom domains, verify
 2. Password login is merged (PR #4). Each admin logs in once via magic link (SMTP still unset, so an operator-issued link) and sets a password in Admin > Account, then confirms email + password login. Users and `public.admins` rows already exist. Configure real SMTP so the magic-link fallback can be delivered.
 3. Apply `20261025140000_decrement_stock.sql` on test, copy the updated `create-checkout` and `stripe-webhook` into `~/supabase-test/volumes/functions/`, smoke-test a cart of more than 7 items with `4242…`, and confirm the order plus stock. Prod Stripe is not set up
-4. DHCP reservation for pi-1; Always Use HTTPS
+4. DHCP reservation for pi-1 on the AT&T Fiber gateway (current lease `192.168.1.236`, hostname `pi-1.local`; the IP can change until reserved); Always Use HTTPS
 5. Replace Unsplash with real product photos via admin or Storage
 6. When ready, migrate to Supabase Cloud (checklist above)
 
