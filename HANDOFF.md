@@ -90,7 +90,7 @@ postcss.config.mjs        @tailwindcss/postcss — required for CSS to compile
 | File | Role |
 |------|------|
 | `next.config.ts` | `output: 'export'`, `trailingSlash`, `basePath`/`assetPrefix` from `NEXT_PUBLIC_BASE_PATH` |
-| `src/lib/env.ts` | Reads `NEXT_PUBLIC_ADMIN_EMAILS` (comma-separated allowlist) |
+| `src/lib/env.ts` | Reads `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com` |
 | `src/lib/demo-data.ts` | Fallback catalog when Supabase env missing |
 | `src/lib/products.ts` | Reads active products (Supabase anon or demo) |
 | `src/lib/functions.ts` | Calls Edge Functions with anon key; base URL = `NEXT_PUBLIC_SUPABASE_FUNCTIONS_URL` or `${NEXT_PUBLIC_SUPABASE_URL}/functions/v1` |
@@ -104,7 +104,7 @@ postcss.config.mjs        @tailwindcss/postcss — required for CSS to compile
 |------|---------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase API base URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key |
-| `NEXT_PUBLIC_ADMIN_EMAILS` | Admin allowlist (client-visible) |
+| `NEXT_PUBLIC_ADMIN_EMAILS` | Admin allowlist (client-visible). Prod: `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com` |
 | `NEXT_PUBLIC_SITE_URL` | Canonical site URL (Stripe success/cancel redirects) |
 | `NEXT_PUBLIC_BASE_PATH` | Sub-path; `/cerhera-nail` only for GitHub Pages; **unset** for cerheranails.com and test site |
 | `NEXT_PUBLIC_SUPABASE_FUNCTIONS_URL` | Optional override for Edge Functions base URL |
@@ -141,7 +141,7 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 - [x] Cloudflare Pages project `cerhera-nail` created and connected to this repo (production branch `main`, build `npm run build`, output `out`). Default URL https://cerhera-nail.pages.dev. Custom domains `cerheranails.com` and `www.cerheranails.com` are **Active with SSL**. The production build uses the Pi Supabase (`https://api.cerheranails.com`). Env var **names** on the project: `NODE_VERSION`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_ADMIN_EMAILS` (values live in the Pages project, not here)
 - [x] Prod pooler ports 5432/6543 bound to `127.0.0.1` (2026-10-24). Note: `update.sh` / upstream compose updates may revert this edit — re-check after updating.
 - [x] Prod `DISABLE_SIGNUP=true` (2026-10-24); public `/auth/v1/signup` and OTP user-creation return 422 `signup_disabled`
-- [x] Prod admin auth user `nghiathanhle.25@gmail.com` created 2026-10-24 (email confirmed; random password generated on pi-1 and discarded — login is magic link only)
+- [x] Prod admin auth users `nghiathanhle.25@gmail.com` and `angela.nguyen646@gmail.com` exist (email confirmed). Login is magic link only; any generated password was discarded on pi-1. Allowlist: `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`
 
 ### Not done / in progress
 
@@ -165,7 +165,7 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 2. **Bake public env into the static build.** Changing Supabase URL/key after deploy requires rebuild + redeploy (Cloudflare Pages: change env var → retry deployment).
 3. **Base path:** set `NEXT_PUBLIC_BASE_PATH=/cerhera-nail` only for GitHub Pages. Leave it **unset** for `npm run dev`, Cloudflare Pages (cerheranails.com) and the pi-1 test site.
 4. **Do not use Next API routes** for checkout/webhooks on this hosting model.
-5. **Admin security:** allowlist is `NEXT_PUBLIC_ADMIN_EMAILS` (client-visible, UI-only). RLS allows *any* authenticated user to write products and read/update orders. Prod has `DISABLE_SIGNUP=true` so only operator-created users exist; keep it that way (test stack still allows signups). Adding an `admins` table to RLS is still recommended.
+5. **Admin security:** allowlist is `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com` (client-visible, UI-only). RLS allows *any* authenticated user to write products and read/update orders. Prod has `DISABLE_SIGNUP=true` so only operator-created users exist; keep it that way (test stack still allows signups). Adding an `admins` table to RLS is still recommended.
 6. **OAuth `workflow` scope:** early push of `.github/workflows` failed once; file exists on `main` now. GitHub Pages source is **legacy `gh-pages` branch**, not Actions.
 7. **Never expose Postgres** (5432 / 6543 or test 54322 / 56543) through the tunnel or router. The tunnel only routes the Supabase API paths listed below.
 8. **pi-1 Wi-Fi is flaky** — SSH may drop; retry. Use `ssh -o BatchMode=yes nghia@192.168.1.231` from the Mac mini.
@@ -270,7 +270,7 @@ The project is created and connected to this repo. Custom domains are **Active w
 | Env vars (names only) | `NODE_VERSION`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_ADMIN_EMAILS` |
 | Do **not** set | `NEXT_PUBLIC_BASE_PATH` |
 
-`NODE_VERSION` is 22. `NEXT_PUBLIC_SITE_URL` is https://cerheranails.com. `NEXT_PUBLIC_SUPABASE_URL` is https://api.cerheranails.com. Do not copy the anon key into this file.
+`NODE_VERSION` is 22. `NEXT_PUBLIC_SITE_URL` is https://cerheranails.com. `NEXT_PUBLIC_SUPABASE_URL` is https://api.cerheranails.com. `NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`. Do not copy the anon key into this file.
 
 Verify after deploy:
 
@@ -296,7 +296,7 @@ export NEXT_PUBLIC_SITE_URL=https://nghiathanhle.github.io/cerhera-nail
 # Optional if Supabase ready:
 # export NEXT_PUBLIC_SUPABASE_URL=...
 # export NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-# export NEXT_PUBLIC_ADMIN_EMAILS=you@example.com
+# export NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com
 
 npm ci
 npm run build
@@ -378,10 +378,10 @@ Rules: `.env*` files stay mode 600 and gitignored (repo `.gitignore` has `.env*`
 - **No hardcoded credentials** found in the repo working tree or full git history (all branches): no JWTs, `sk_live`/`sk_test`/`whsec_` values, or passwords. `.env.example` / README contain only placeholders (`sk_test_...`, `whsec_...`). Edge Functions read secrets via `Deno.env.get`.
 - Supabase compose dirs: no hardcoded secrets outside `.env`; matches are upstream scripts/tests that read `.env` or use `changeme` test fixtures.
 - `.env`, `.env.local`, `.env.bak-*` are mode 600 and gitignored. Built `out/` bundles contain the **test anon** JWT (expected; public key).
-- **Partly mitigated — admin authorization:** RLS policies still grant `authenticated` full product/image/settings writes and order read/update; the email allowlist is only enforced in the UI. Prod signups are disabled and the operator admin user exists, so a stranger cannot self-serve an account on prod; the test stack still allows signups (`DISABLE_SIGNUP=false`). Remaining fix: add an `admins` table and change policies to `using (exists (select 1 from public.admins where user_id = auth.uid()))`.
+- **Partly mitigated — admin authorization:** RLS policies still grant `authenticated` full product/image/settings writes and order read/update; the email allowlist is only enforced in the UI (`NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`). Prod signups are disabled and both operator admin users exist (`nghiathanhle.25@gmail.com`, `angela.nguyen646@gmail.com`), so a stranger cannot self-serve an account on prod; the test stack still allows signups (`DISABLE_SIGNUP=false`). Remaining fix: add an `admins` table and change policies to `using (exists (select 1 from public.admins where user_id = auth.uid()))`.
 - Prod Postgres/pooler ports are bound to `127.0.0.1` (fixed 2026-10-24).
 - Prod public signups disabled (`DISABLE_SIGNUP=true`, fixed 2026-10-24). Admin users must be created by an operator (Studio → Authentication → Add user, on the LAN dashboard). Admin login is magic link (`signInWithOtp` in `src/app/admin/login/page.tsx`), which needs working SMTP.
-- **Admin user / one-time login (no SMTP yet):** with signups disabled and no working SMTP, the admin user was created and a login link issued on pi-1 only, using the GoTrue admin API at `http://localhost:8000/auth/v1` with `SERVICE_ROLE_KEY` read from `~/supabase/.env` inside a remote Python script (key never on a command line or in logs):
+- **Admin users / one-time login (no SMTP yet):** both prod auth users already exist: `nghiathanhle.25@gmail.com` and `angela.nguyen646@gmail.com` (`NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`). With signups disabled and no working SMTP, a login link is issued on pi-1 only, using the GoTrue admin API at `http://localhost:8000/auth/v1` with `SERVICE_ROLE_KEY` read from `~/supabase/.env` inside a remote Python script (key never on a command line or in logs):
   1. `POST /admin/users` `{email, password: <random, discarded>, email_confirm: true}`
   2. `POST /admin/generate_link` `{type: "magiclink", email, redirect_to: "https://cerheranails.com/admin/"}` → `action_link` on `https://api.cerheranails.com/auth/v1/verify` (host comes from `API_EXTERNAL_URL`)
   Links are single use and expire after `MAILER_OTP_EXP` (not set in `.env` → GoTrue default 86400 s / 24 h). Repeat step 2 to issue a new link until SMTP is configured; then use the normal login page.
@@ -412,7 +412,7 @@ Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `n
 ## Suggested next steps for the next agent
 
 1. Confirm https://cerheranails.com, https://www.cerheranails.com, and https://cerhera-nail.pages.dev serve the production build against the Pi Supabase. GitHub Pages (`gh-pages`) stays up as the legacy site.
-2. Configure real SMTP on prod, then verify magic-link login for the existing admin user. Until SMTP works, issue a one-time link on pi-1 (see Security notes). Add an `admins` table to RLS.
+2. Configure real SMTP on prod, then verify magic-link login for both existing admin users (`NEXT_PUBLIC_ADMIN_EMAILS=nghiathanhle.25@gmail.com,angela.nguyen646@gmail.com`). Until SMTP works, issue a one-time link on pi-1 (see Security notes). Add an `admins` table to RLS.
 3. Deploy Edge Functions + Stripe test keys on pi-1; smoke-test checkout with `4242…`
 4. DHCP reservation (or Ethernet) for pi-1; turn on Cloudflare “Always Use HTTPS”. Prod Postgres ports are already bound to `127.0.0.1` and prod signups are already disabled.
 5. Replace Unsplash with real product photos via admin or Storage
