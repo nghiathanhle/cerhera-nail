@@ -63,7 +63,7 @@ Do **not** add Next.js API routes / Server Actions expecting them to work on a s
 2. Client calls Edge Function `create-checkout` with cart IDs/qty
 3. Function reloads prices/stock from DB, creates Stripe session (US shipping address)
 4. User pays on Stripe
-5. Webhook `checkout.session.completed` inserts `orders` / `order_items`, decrements stock
+5. Webhook `checkout.session.completed` verifies the signature asynchronously, rebuilds the cart from Checkout line items, inserts `orders` / `order_items` (deduped on `stripe_session_id`), and decrements stock with `decrement_stock`
 6. Success page polls `order-status`
 
 Never trust client prices.
@@ -144,8 +144,9 @@ Edge Function secrets (server-side, never `NEXT_PUBLIC_`): `SUPABASE_SERVICE_ROL
 ### Not done / in progress
 
 - [ ] **Cloudflare Pages project `cerhera-nail`** — Git connection needs GitHub authorization of the “Cloudflare Workers and Pages” app; then build settings + env vars + custom domains `cerheranails.com` and `www.cerheranails.com`
-- [ ] Deploy Edge Functions to self-hosted Supabase (`~/supabase/volumes/functions/` currently only has the stock `main` + `hello`) + set Stripe secrets
-- [ ] Create Stripe account (test) + webhook to `https://api.cerheranails.com/functions/v1/stripe-webhook`
+- [x] Test Edge Functions `create-checkout`, `order-status`, and `stripe-webhook` are on `~/supabase-test` (see Stripe). Prod `~/supabase/volumes/functions/` still only has the stock `main` + `hello`
+- [x] Stripe test account and test-mode webhook are set up (see Stripe). Prod Stripe is not set up
+- [ ] Apply `supabase/migrations/20261025140000_decrement_stock.sql` on test (then prod when Stripe prod exists) and copy the updated `create-checkout` and `stripe-webhook` into the test functions dir before the next checkout smoke test
 - [x] Prod admin auth user `nghiathanhle.25@gmail.com` created 2026-10-24 (email confirmed; random password generated on pi-1 and discarded — login is magic link only)
 - [x] Prod admin auth user `angela.nguyen646@gmail.com` created 2026-10-24 (email confirmed, random password discarded; no login link issued — she needs SMTP-delivered magic link or an operator-generated link)
 - [ ] Verify admin login end-to-end (one-time link issued 2026-10-24, see Security notes)
@@ -226,9 +227,9 @@ docker exec -i supabase-test-db psql -U postgres -v ON_ERROR_STOP=1 --single-tra
 # 3. Check test (API + site), then repeat step 2 with supabase-db
 ```
 
-Restore (only if needed; overwrites objects in the dump): `docker exec -i supabase-db pg_restore -U supabase_admin -d postgres --clean --if-exists < ~/supabase/backup-<ts>.dump`. Applied migrations so far: `20261024203150_initial_schema.sql` (+ `seed.sql`), `20261025010000_admin_only_rls.sql`. There is no migration-history table on the self-hosted stacks; track applied files here.
+Restore (only if needed; overwrites objects in the dump): `docker exec -i supabase-db pg_restore -U supabase_admin -d postgres --clean --if-exists < ~/supabase/backup-<ts>.dump`. Applied migrations so far: `20261024203150_initial_schema.sql` (+ `seed.sql`), `20261025010000_admin_only_rls.sql`. `20261025140000_decrement_stock.sql` is in the repo and not applied yet (see Stripe). There is no migration-history table on the self-hosted stacks; track applied files here.
 
-Edge Functions (self-hosted): copy `supabase/functions/<name>/` into `~/supabase/volumes/functions/<name>/`, add `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` to `~/supabase/.env` and pass them to the `functions` service in `docker-compose.yml`, then `docker compose up -d functions`. Not done yet.
+Edge Functions (self-hosted): the runtime reads `volumes/functions/<name>/index.ts` on each request, so replacing a file does not need a functions restart. Test already has `create-checkout`, `order-status`, and `stripe-webhook`. Prod does not. Keys, `FUNCTIONS_VERIFY_JWT`, and the webhook endpoint are in Stripe. Copy updated function files only after `20261025140000_decrement_stock.sql` is applied on that database, or paid orders will be recorded without a stock change.
 
 ### Cloudflare Tunnel `pi-1-supabase`
 
@@ -332,16 +333,12 @@ curl -sL https://nghiathanhle.github.io/cerhera-nail/ | grep -o '<title>[^<]*'
 
 1. ~~Run migration SQL + `seed.sql`~~ — done on prod and test (2026-10-24)
 2. Auth redirect URLs are set via `ADDITIONAL_REDIRECT_URLS` in the stack `.env` (+ `docker compose up -d auth`). Admin magic link lands on `/admin/`.
-3. Deploy Edge Functions into `volumes/functions/` (see pi-1 section)
-4. Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` in `~/supabase/.env`; `SUPABASE_SERVICE_ROLE_KEY` = `SERVICE_ROLE_KEY` from the same file
+3. Test functions are already in `~/supabase-test/volumes/functions/` (see Stripe). Prod functions are not deployed.
+4. `SUPABASE_SERVICE_ROLE_KEY` for a stack is `SERVICE_ROLE_KEY` from that stack's `.env`. Stripe key names and where the test values live are in Stripe. Do not commit them.
 
 ### Stripe
 
-1. Test mode API secret key → Supabase secret
-2. Webhook endpoint: `https://api.cerheranails.com/functions/v1/stripe-webhook` (Supabase Cloud later: `https://PROJECT.supabase.co/functions/v1/stripe-webhook`)
-3. Event: `checkout.session.completed`
-4. Signing secret → `STRIPE_WEBHOOK_SECRET`
-5. No need to pre-create Stripe Products; line items built from DB prices
+See the Stripe section below. Test mode is wired on pi-1. Prod Stripe is not set up. Supabase Cloud later would use `https://PROJECT.supabase.co/functions/v1/stripe-webhook`.
 
 ### Site env (build-time)
 
@@ -377,6 +374,34 @@ If the select doesn't list the email, that auth user doesn't exist in that datab
 
 ---
 
+## Stripe
+
+Test checkout is on the pi-1 test stack. Prod Stripe is not set up (no prod keys, no prod webhook, prod functions dir still only the stock `main` and `hello`).
+
+| Item | Value |
+|------|-------|
+| Stripe account | `acct_1UUFNuR1xtjzoAz8` (login in Nghia's vault entry "Stripe") |
+| Mode in use | Test mode only |
+| Functions on test | `create-checkout`, `order-status`, `stripe-webhook` |
+| Deploy | Copy `supabase/functions/<name>/index.ts` into `~/supabase-test/volumes/functions/<name>/`. The runtime reads the file per request; no functions restart |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Only in `~/supabase-test/.env` on pi-1 (mode 600). Passed into the `functions` service with docker-compose `${VAR:-}`. Not in the repo, not in prod `.env` |
+| `FUNCTIONS_VERIFY_JWT` | `false` on the test functions service (checkout and the webhook are called without a user JWT) |
+| Webhook endpoint | `we_1UUH0rR1xtjzoAz8VE7dqU7k` |
+| Webhook URL | `https://api-test.cerheranails.com/functions/v1/stripe-webhook` |
+| Webhook event | `checkout.session.completed` |
+
+No pre-created Stripe Products. `create-checkout` builds `price_data` from the database and puts our `product_id` on `price_data.product_data.metadata`. Session metadata keeps only `subtotal_cents` and `shipping_cents`. The whole cart is not stored in one metadata value (Stripe's 500-character limit, about 7 items).
+
+`stripe-webhook` verifies the signature with `constructEventAsync` and `Stripe.createSubtleCryptoProvider()`. The synchronous `constructEvent` throws `SubtleCryptoProvider cannot be used in a synchronous context` on this self-hosted edge runtime, which turned every webhook into HTTP 400 and recorded no order. After a valid `checkout.session.completed`, the function lists the session line items (`data.price.product` expanded), reads `product_id` from each product, inserts the paid order (skipped when `stripe_session_id` already exists), inserts `order_items` from current database names and prices, and calls `decrement_stock`.
+
+`public.decrement_stock(product_id, qty)` is migration `supabase/migrations/20261025140000_decrement_stock.sql`: `update public.products set stock = stock - qty where id = product_id and stock >= qty`. It returns the remaining stock, or null when the product is missing or stock is too low (the paid order is still kept; the miss is logged). Execute is granted only to `service_role`. **Not applied yet.** Apply it on test with the migration steps above before copying this webhook, or stock will not move. Then copy `create-checkout` and `stripe-webhook`. Prod gets the same migration only when prod Stripe is set up.
+
+`create-checkout` returns generic errors to the browser (`Checkout failed.`, `Could not load products.`, plus the shopper-facing empty-bag / unavailable / stock messages). Detail stays in the function logs.
+
+Changing `~/supabase-test/.env` is not the same as copying a function file: recreate the test `functions` service so the container picks up new env values. Do not write secret values into this file.
+
+---
+
 ## Secrets: where they live and how to rotate
 
 | Secret | Location | Rotate |
@@ -386,7 +411,7 @@ If the select doesn't list the email, that auth user doesn't exist in that datab
 | `DASHBOARD_USERNAME` / `DASHBOARD_PASSWORD` (Studio) | stack `.env` | Edit `.env`, `docker compose up -d --force-recreate api-gw studio` |
 | Other generated keys (`SECRET_KEY_BASE`, `VAULT_ENC_KEY`, `PG_META_CRYPTO_KEY`, S3/Logflare keys) | stack `.env` | Edit + recreate; `VAULT_ENC_KEY` change breaks existing Vault secrets |
 | SMTP credentials | stack `.env` (`SMTP_*`) | Rotate at the mail provider, update `.env`, `docker compose up -d auth` |
-| Stripe secret / webhook secret | (to be added) `~/supabase/.env` | Roll in Stripe dashboard, update `.env`, restart `functions` |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Test only: `~/supabase-test/.env` (mode 600), passed to `functions` as `${VAR:-}`. Prod not set up. Never commit the values | Roll in the Stripe dashboard (account `acct_1UUFNuR1xtjzoAz8`, vault entry "Stripe"), update `.env`, recreate the `functions` service |
 | Cloudflare Tunnel credentials | `/etc/cloudflared/<tunnel-id>.json` (root 600) | Cloudflare dashboard → Zero Trust → Tunnels, or `cloudflared tunnel` CLI; restart `cloudflared` |
 | Cloudflare / GitHub logins | Nghia's Grok Bot vault (GitHub entry `github.com`); Cloudflare session in the bot's box browser | Change at provider |
 | Test build env | `~/cerhera-nail-test/.env.local` (600) | Rebuild after change |
@@ -455,7 +480,7 @@ Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `n
 
 1. Finish Cloudflare Pages (`cerhera-nail`): GitHub app authorization, env vars, custom domains, verify
 2. Configure real SMTP on prod, verify magic-link login for both admins (users + `public.admins` rows already exist)
-3. Deploy Edge Functions + Stripe test keys on pi-1; smoke-test checkout with `4242…`
+3. Apply `20261025140000_decrement_stock.sql` on test, copy the updated `create-checkout` and `stripe-webhook` into `~/supabase-test/volumes/functions/`, smoke-test a cart of more than 7 items with `4242…`, and confirm the order plus stock. Prod Stripe is not set up
 4. DHCP reservation for pi-1; Always Use HTTPS
 5. Replace Unsplash with real product photos via admin or Storage
 6. When ready, migrate to Supabase Cloud (checklist above)

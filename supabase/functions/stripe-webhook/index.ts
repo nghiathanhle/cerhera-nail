@@ -1,6 +1,9 @@
 import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 Deno.serve(async (req) => {
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
@@ -8,6 +11,7 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   if (!stripeKey || !webhookSecret) {
+    console.error("Missing Stripe config");
     return new Response("Missing Stripe config", { status: 500 });
   }
 
@@ -24,8 +28,17 @@ Deno.serve(async (req) => {
   const body = await req.text();
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    // Sync constructEvent throws on this runtime:
+    // "SubtleCryptoProvider cannot be used in a synchronous context".
+    event = await stripe.webhooks.constructEventAsync(
+      body,
+      signature,
+      webhookSecret,
+      undefined,
+      Stripe.createSubtleCryptoProvider(),
+    );
   } catch (err) {
+    console.error(err);
     const message = err instanceof Error ? err.message : "Invalid signature";
     return new Response(message, { status: 400 });
   }
@@ -41,6 +54,16 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!existing) {
+      let cart: { productId: string; quantity: number }[] = [];
+      try {
+        cart = await lineItemsToCart(stripe, session.id);
+      } catch (err) {
+        console.error(err);
+        return new Response("Could not read checkout line items", {
+          status: 500,
+        });
+      }
+
       const email =
         session.customer_details?.email ||
         session.customer_email ||
@@ -85,19 +108,16 @@ Deno.serve(async (req) => {
         return new Response("Order insert failed", { status: 500 });
       }
 
-      let cart: { productId: string; quantity: number }[] = [];
-      try {
-        cart = JSON.parse(session.metadata?.cart || "[]");
-      } catch {
-        cart = [];
-      }
-
       if (cart.length > 0) {
-        const ids = cart.map((c) => c.productId);
-        const { data: products } = await supabase
+        const ids = [...new Set(cart.map((c) => c.productId))];
+        const { data: products, error: productsError } = await supabase
           .from("products")
-          .select("id, name, price_cents, stock")
+          .select("id, name, price_cents")
           .in("id", ids);
+
+        if (productsError) {
+          console.error(productsError.message);
+        }
 
         const byId = new Map((products || []).map((p) => [p.id, p]));
         const items = cart.flatMap((c) => {
@@ -115,17 +135,38 @@ Deno.serve(async (req) => {
         });
 
         if (items.length) {
-          await supabase.from("order_items").insert(items);
+          const { error: itemsError } = await supabase
+            .from("order_items")
+            .insert(items);
+          if (itemsError) {
+            console.error(itemsError.message);
+          }
         }
 
         for (const c of cart) {
           const product = byId.get(c.productId);
           if (!product) continue;
-          await supabase
-            .from("products")
-            .update({ stock: Math.max(0, product.stock - c.quantity) })
-            .eq("id", product.id);
+          const { data: remaining, error: stockError } = await supabase.rpc(
+            "decrement_stock",
+            { product_id: product.id, qty: c.quantity },
+          );
+          if (stockError) {
+            console.error(
+              "decrement_stock failed",
+              product.id,
+              c.quantity,
+              stockError.message,
+            );
+          } else if (remaining == null) {
+            console.error(
+              "decrement_stock skipped (missing product or not enough stock)",
+              product.id,
+              c.quantity,
+            );
+          }
         }
+      } else {
+        console.error("checkout session had no product line items", session.id);
       }
     }
   }
@@ -134,3 +175,43 @@ Deno.serve(async (req) => {
     headers: { "Content-Type": "application/json" },
   });
 });
+
+function productIdFromLineItem(item: Stripe.LineItem): string | null {
+  const price = item.price;
+  if (!price || typeof price === "string") return null;
+  const product = price.product;
+  if (!product || typeof product === "string") return null;
+  if ("deleted" in product && product.deleted) return null;
+  const productId = product.metadata?.product_id?.trim() ?? "";
+  if (!UUID_RE.test(productId)) return null;
+  return productId;
+}
+
+async function lineItemsToCart(
+  stripe: Stripe,
+  sessionId: string,
+): Promise<{ productId: string; quantity: number }[]> {
+  const cart: { productId: string; quantity: number }[] = [];
+  let startingAfter: string | undefined;
+
+  for (let page = 0; page < 20; page++) {
+    const listed = await stripe.checkout.sessions.listLineItems(sessionId, {
+      limit: 100,
+      expand: ["data.price.product"],
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+
+    for (const line of listed.data) {
+      const productId = productIdFromLineItem(line);
+      const quantity = line.quantity ?? 0;
+      if (!productId || quantity <= 0) continue;
+      cart.push({ productId, quantity });
+    }
+
+    if (!listed.has_more || listed.data.length === 0) break;
+    startingAfter = listed.data[listed.data.length - 1]?.id;
+    if (!startingAfter) break;
+  }
+
+  return cart;
+}
