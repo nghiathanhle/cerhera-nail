@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { useCart } from "./cart-provider";
+import { cn } from "@/lib/cn";
 
 export function AddToCartButton({
   productId,
   disabled,
+  fullWidth,
 }: {
   productId: string;
   disabled?: boolean;
+  fullWidth?: boolean;
 }) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
@@ -22,7 +25,7 @@ export function AddToCartButton({
         setAdded(true);
         window.setTimeout(() => setAdded(false), 1600);
       }}
-      className="inline-flex h-12 items-center justify-center rounded-full bg-ink px-8 text-sm font-medium text-foam transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-40"
+      className={cn("btn-primary", fullWidth && "w-full", added && "animate-soft-pulse")}
     >
       {disabled ? "Sold out" : added ? "Added to bag" : "Add to bag"}
     </button>

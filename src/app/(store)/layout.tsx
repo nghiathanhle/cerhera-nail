@@ -1,5 +1,5 @@
+import { SiteChrome } from "@/components/site-chrome";
 import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
 import { getSiteSettings } from "@/lib/settings";
 
 export default async function StoreLayout({
@@ -11,7 +11,10 @@ export default async function StoreLayout({
 
   return (
     <div className="flex min-h-full flex-col">
-      <SiteHeader storeName={settings.store_name} />
+      <SiteChrome
+        storeName={settings.store_name}
+        freeShippingThresholdCents={settings.free_shipping_threshold_cents}
+      />
       <main className="flex-1">{children}</main>
       <SiteFooter storeName={settings.store_name} />
     </div>

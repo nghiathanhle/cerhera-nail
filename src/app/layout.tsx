@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Outfit } from "next/font/google";
+import { Cormorant_Garamond, Outfit } from "next/font/google";
 import { CartProvider } from "@/components/cart-provider";
 import "./globals.css";
 
-const display = Fraunces({
+const display = Cormorant_Garamond({
   variable: "--font-display",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const body = Outfit({
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s · Cerhera Nails",
   },
   description:
-    "Cerhera Nails — simple, elegant, whimsical press-on styles. Ready sets shipping within the US.",
+    "Cerhera Nails — ethereal press-on styles in a Sahara sunset mood. Ready sets, ships within the US.",
 };
 
 export default function RootLayout({

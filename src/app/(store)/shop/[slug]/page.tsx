@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCartButton } from "@/components/add-to-cart-button";
+import { PdpDetails } from "@/components/pdp-details";
+import { collectionForProduct } from "@/lib/collections";
 import { resolveImageUrl } from "@/lib/images";
 import { formatUsd } from "@/lib/money";
 import { getActiveProducts, getProductBySlug } from "@/lib/products";
@@ -27,11 +29,12 @@ export default async function ProductPage({ params }: Props) {
 
   const images = product.product_images;
   const primary = images[0];
+  const collection = collectionForProduct(product);
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-2 md:gap-14 md:px-8 md:py-20">
-      <div className="space-y-4">
-        <div className="overflow-hidden rounded-[1.75rem] bg-blush/25">
+      <div className="space-y-3">
+        <div className="overflow-hidden bg-mist/50">
           {primary && (
             <Image
               src={resolveImageUrl(primary.storage_path)}
@@ -45,19 +48,16 @@ export default async function ProductPage({ params }: Props) {
           )}
         </div>
         {images.length > 1 && (
-          <div className="grid grid-cols-3 gap-3">
-            {images.slice(1, 4).map((img) => (
-              <div
-                key={img.id}
-                className="overflow-hidden rounded-2xl bg-mist"
-              >
+          <div className="grid grid-cols-2 gap-3">
+            {images.slice(1, 5).map((img) => (
+              <div key={img.id} className="overflow-hidden bg-mist/40">
                 <Image
                   src={resolveImageUrl(img.storage_path)}
                   alt={img.alt || product.name}
-                  width={400}
-                  height={400}
+                  width={600}
+                  height={600}
                   className="aspect-square h-auto w-full object-cover"
-                  sizes="150px"
+                  sizes="(max-width: 768px) 50vw, 25vw"
                 />
               </div>
             ))}
@@ -65,15 +65,17 @@ export default async function ProductPage({ params }: Props) {
         )}
       </div>
 
-      <div className="flex flex-col md:pt-6">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-petal">
-          Style
-        </p>
-        <h1 className="mt-2 font-display text-4xl text-ink md:text-5xl">
+      <div className="flex flex-col md:pt-4">
+        {product.featured && (
+          <span className="mb-4 inline-flex w-fit bg-ink px-2.5 py-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-foam">
+            Featured
+          </span>
+        )}
+        <h1 className="text-3xl font-semibold uppercase tracking-[0.08em] text-ink md:text-4xl">
           {product.name}
         </h1>
 
-        <div className="mt-5 flex items-baseline gap-3">
+        <div className="mt-4 flex items-baseline gap-3">
           <p className="text-lg text-ink">{formatUsd(product.price_cents)}</p>
           {product.compare_at_cents != null &&
             product.compare_at_cents > product.price_cents && (
@@ -83,42 +85,36 @@ export default async function ProductPage({ params }: Props) {
             )}
         </div>
 
-        <p className="mt-6 max-w-md text-sm leading-relaxed text-ink/70 md:text-base">
-          {product.description}
-        </p>
-
         <p className="mt-4 text-sm text-ink/55">
           {product.stock > 0
             ? `${product.stock} sets in stock`
             : "Currently sold out"}
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center gap-4">
+        <div className="mt-8 space-y-4">
           <AddToCartButton
             productId={product.id}
             disabled={product.stock <= 0}
+            fullWidth
           />
+          <p className="text-center text-xs text-ink/45">
+            Guest checkout · US addresses only
+          </p>
           <Link
             href="/size-chart/"
-            className="text-sm text-ink/65 underline decoration-ink/20 underline-offset-4 hover:text-ink"
+            className="block text-center text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-ink/55 underline decoration-ink/20 underline-offset-4 hover:text-ink"
           >
             Size chart
           </Link>
         </div>
 
-        <ul className="mt-10 space-y-2 border-t border-ink/10 pt-8 text-sm text-ink/60">
-          <li>Ten-piece ready set · adhesive tabs included</li>
-          <li>US shipping only for now</li>
-          <li>
-            <Link href="/how-to-apply/" className="underline decoration-ink/20">
-              How to apply
-            </Link>{" "}
-            ·{" "}
-            <Link href="/care/" className="underline decoration-ink/20">
-              Care tips
-            </Link>
-          </li>
-        </ul>
+        <PdpDetails
+          description={product.description}
+          collectionName={collection?.name}
+          collectionHref={
+            collection ? `/collections/${collection.slug}/` : undefined
+          }
+        />
       </div>
     </div>
   );
