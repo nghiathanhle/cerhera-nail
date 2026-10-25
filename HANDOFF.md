@@ -130,7 +130,7 @@ postcss.config.mjs        @tailwindcss/postcss — required for CSS to compile
 2. **Bake public env into the static build.** Changing Supabase URL after deploy requires rebuild + redeploy.
 3. **Local vs Pages:** leave `NEXT_PUBLIC_BASE_PATH` unset for `npm run dev`; set `/cerhera-nail` for Pages builds.
 4. **Do not use Next API routes** for checkout/webhooks on this hosting model.
-5. **Admin security:** allowlist is `NEXT_PUBLIC_ADMIN_EMAILS` (client-visible). RLS currently allows authenticated writes to products; tighten with an `admins` table / policy before production if needed.
+5. **Admin security:** `NEXT_PUBLIC_ADMIN_EMAILS` is still only a client-visible UI check. Migration `20261025010000_admin_only_rls.sql` limits catalog writes, storage writes, and order reads to `public.admins` via `public.is_admin()`. Apply it on test, then prod, and seed the admin row (see Security notes). An empty `admins` table locks those operations.
 6. **OAuth `workflow` scope:** early push of `.github/workflows` failed once; file exists on `main` now. Pages source is **legacy `gh-pages` branch**, not Actions, unless user switches it.
 
 ---
@@ -197,12 +197,42 @@ NEXT_PUBLIC_ADMIN_EMAILS=...
 
 ---
 
+## Security notes
+
+Migration `supabase/migrations/20261025010000_admin_only_rls.sql` enforces admin access in Postgres. The storefront allowlist does not.
+
+- `public.admins` stores `user_id` (FK to `auth.users`, on delete cascade). RLS is on and there is no policy for `anon` or `authenticated`, and those roles have no grants, so the API cannot read or edit the table. Insert rows as `postgres` or the service role.
+- `public.is_admin()` is `security definer` with an empty `search_path`. It is true only when `auth.uid()` is in `public.admins`.
+- Insert, update, and delete on `products`, `product_images`, and `site_settings`, writes to the `product-images` bucket, order read/update, and `order_items` read now require `public.is_admin()`. Reading inactive products and every product image is admin-only as well (the admin dashboard loads them).
+- Public read is unchanged for `anon` and `authenticated`: `site_settings`, active products, images of active products, and objects in the public `product-images` bucket.
+- `create-checkout`, `stripe-webhook`, and `order-status` use the service role and bypass RLS. Checkout, stock decrement, order insert, and order-status polling do not need an admin row.
+- `NEXT_PUBLIC_ADMIN_EMAILS` (`src/lib/env.ts`) still only hides the dashboard. The same person needs a row in `public.admins` or those queries fail with an RLS error.
+
+Seed the first admin after that auth user exists. No password in this step. On prod the user `nghiathanhle.25@gmail.com` already exists; run this as `postgres` inside the stack:
+
+```sql
+insert into public.admins (user_id)
+select id from auth.users
+where email = 'nghiathanhle.25@gmail.com';
+```
+
+Confirm one row before using the dashboard:
+
+```sql
+select u.email
+from public.admins a
+join auth.users u on u.id = a.user_id;
+```
+
+Apply the migration on the test stack first, then prod. Seed whichever auth user should administer test the same way.
+
 ## Data model (summary)
 
 - `site_settings` (singleton id=1): `store_name`, `flat_shipping_cents`, `free_shipping_threshold_cents`
 - `products`: name, slug, description, price_cents, stock, active, featured, sort_order
 - `product_images`: `storage_path` may be full `https://` URL or Storage path under bucket `product-images`
 - `orders` / `order_items`: written by webhook; statuses `pending|paid|shipped|cancelled`
+- `admins`: `user_id` of operators allowed to manage the catalog and fulfill orders. Not exposed through the Data API.
 
 ---
 
@@ -221,7 +251,7 @@ Next.js in this repo may differ from “classic” Next — see `AGENTS.md` / `n
 
 1. With user credentials: wire Supabase + Stripe end-to-end; smoke-test checkout with `4242…`
 2. Redeploy Pages with real `NEXT_PUBLIC_*` so catalog leaves demo mode
-3. Harden admin RLS before real inventory
+3. Apply `supabase/migrations/20261025010000_admin_only_rls.sql` on test, then prod, and seed `public.admins` (see Security notes)
 4. Replace Unsplash with real product photos via admin or Storage
 5. If user wants CI deploys: enable Pages → GitHub Actions and fill Actions secrets
 
